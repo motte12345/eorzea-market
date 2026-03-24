@@ -15,15 +15,25 @@ from app.models.world import World  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
+# 集計対象リージョン（中国・韓国を除外）
+INCLUDED_REGIONS = ("Japan", "North-America", "Europe", "Oceania")
+
+# 高額アイテムランキングから除外するアイテムID
+EXCLUDED_ITEM_IDS: list[int] = [
+    # 必要に応じてここに追加
+]
+
 
 async def update_rankings(session_factory: async_sessionmaker) -> None:
     """ランキングを計算してキャッシュに保存"""
+    regions_sql = ", ".join(f"'{r}'" for r in INCLUDED_REGIONS)
+    excluded_sql = ", ".join(str(i) for i in EXCLUDED_ITEM_IDS) if EXCLUDED_ITEM_IDS else "0"
+
     async with session_factory() as session:
         # 高額アイテム TOP10
         logger.info("Calculating expensive items...")
-        # 各アイテムの全サーバー最安値を求め、その最安値が高い順
         expensive_result = await session.execute(
-            text("""
+            text(f"""
                 SELECT
                     item_id, name_ja, name_en, icon_url,
                     global_min AS min_price, listing_count
@@ -35,6 +45,9 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
                         COUNT(l.id) AS listing_count
                     FROM listings l
                     JOIN items i ON l.item_id = i.id
+                    JOIN worlds w ON l.world_id = w.id
+                    WHERE w.region IN ({regions_sql})
+                        AND l.item_id NOT IN ({excluded_sql})
                     GROUP BY l.item_id, i.name_ja, i.name_en, i.icon_url
                 ) ranked
                 WHERE global_min > 0
@@ -59,7 +72,7 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
         # 利益率ランキング TOP10
         logger.info("Calculating arbitrage items...")
         arb_result = await session.execute(
-            text("""
+            text(f"""
                 SELECT
                     a.item_id,
                     i.name_ja, i.name_en, i.icon_url,
@@ -94,6 +107,7 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
                             MIN(l.price_per_unit) AS dc_min
                         FROM listings l
                         JOIN worlds w ON l.world_id = w.id
+                        WHERE w.region IN ({regions_sql})
                         GROUP BY l.item_id, w.data_center, w.name
                     ) dc_prices
                     GROUP BY dc_prices.item_id
@@ -103,6 +117,7 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
                         AND MAX(dc_prices.dc_min) > MIN(dc_prices.dc_min)
                 ) a
                 JOIN items i ON a.item_id = i.id
+                WHERE a.item_id NOT IN ({excluded_sql})
                 ORDER BY profit_rate DESC
                 LIMIT 10
             """)
