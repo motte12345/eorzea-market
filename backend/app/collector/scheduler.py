@@ -142,6 +142,19 @@ def create_scheduler(session_factory: async_sessionmaker) -> AsyncIOScheduler:
         max_instances=1,
     )
 
+    # ランキング更新（6時間ごと）
+    from app.collector.update_ranking import update_rankings
+
+    scheduler.add_job(
+        update_rankings,
+        "interval",
+        hours=6,
+        args=[session_factory],
+        id="ranking_update",
+        name="Ranking cache update",
+        max_instances=1,
+    )
+
     # 古いデータのクリーンアップ（毎日4:00）
     scheduler.add_job(
         cleanup_old_data,
