@@ -77,9 +77,9 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
                     a.item_id,
                     i.name_ja, i.name_en, i.icon_url,
                     a.min_price AS buy_price,
-                    a.buy_info,
+                    a.buy_dc AS buy_info,
                     a.max_price AS sell_price,
-                    a.sell_info,
+                    a.sell_dc AS sell_info,
                     (a.max_price - a.min_price) AS profit,
                     ROUND((a.max_price - a.min_price) / a.min_price * 100, 1) AS profit_rate
                 FROM (
@@ -88,27 +88,20 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
                         MIN(dc_prices.dc_min) AS min_price,
                         MAX(dc_prices.dc_min) AS max_price,
                         SUBSTRING_INDEX(
-                            GROUP_CONCAT(
-                                CONCAT(dc_prices.data_center, ':', dc_prices.world_name)
-                                ORDER BY dc_prices.dc_min ASC
-                            ), ',', 1
-                        ) AS buy_info,
+                            GROUP_CONCAT(dc_prices.data_center ORDER BY dc_prices.dc_min ASC), ',', 1
+                        ) AS buy_dc,
                         SUBSTRING_INDEX(
-                            GROUP_CONCAT(
-                                CONCAT(dc_prices.data_center, ':', dc_prices.world_name)
-                                ORDER BY dc_prices.dc_min DESC
-                            ), ',', 1
-                        ) AS sell_info
+                            GROUP_CONCAT(dc_prices.data_center ORDER BY dc_prices.dc_min DESC), ',', 1
+                        ) AS sell_dc
                     FROM (
                         SELECT
                             l.item_id,
                             w.data_center,
-                            w.name AS world_name,
                             MIN(l.price_per_unit) AS dc_min
                         FROM listings l
                         JOIN worlds w ON l.world_id = w.id
                         WHERE w.region IN ({regions_sql})
-                        GROUP BY l.item_id, w.data_center, w.name
+                        GROUP BY l.item_id, w.data_center
                     ) dc_prices
                     GROUP BY dc_prices.item_id
                     HAVING COUNT(DISTINCT dc_prices.data_center) >= 2
