@@ -732,11 +732,13 @@ export default function ItemDetailPage({ params }: Props) {
                                   </td>
                                   <td
                                     className={`px-3 py-1.5 text-right font-mono ${
-                                      world.min_price === dcMin
-                                        ? "font-bold text-[var(--positive)]"
-                                        : world.min_price === dcMaxPrice
-                                          ? "text-[var(--destructive)]"
-                                          : ""
+                                      world.min_price === globalMin
+                                        ? "font-bold text-[var(--positive)] underline"
+                                        : world.min_price === dcMin
+                                          ? "text-[var(--positive)]"
+                                          : world.min_price === dcMaxPrice && dcMin !== dcMaxPrice
+                                            ? "text-[var(--destructive)]"
+                                            : ""
                                     }`}
                                   >
                                     {formatGil(world.min_price)}
