@@ -162,7 +162,7 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
                 ))
             await session.commit()
 
-        logger.info(f"Rankings updated: {len(expensive)} expensive, {len(arbitrage)} arbitrage")
+        logger.info(f"Rankings updated: {len(expensive)} expensive, {len(arbitrage_rate)} rate, {len(arbitrage_profit)} profit")
 
 
 async def main():
