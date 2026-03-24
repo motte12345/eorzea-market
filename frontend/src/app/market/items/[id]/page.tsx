@@ -49,6 +49,7 @@ interface RegionGroup {
   region: string;
   dcs: DCGroup[];
   min_price: number;
+  min_dc: string;
   min_world: string;
 }
 
@@ -89,6 +90,7 @@ function buildRegionGroups(prices: PriceByWorld[]): RegionGroup[] {
     .map((region) => {
       const dcMap = regionMap.get(region)!;
       let regionMin = Infinity;
+      let regionMinDC = "";
       let regionMinWorld = "";
 
       const dcs: DCGroup[] = Array.from(dcMap.entries())
@@ -101,6 +103,7 @@ function buildRegionGroups(prices: PriceByWorld[]): RegionGroup[] {
               const minPrice = sorted[0].price_per_unit;
               if (minPrice < regionMin) {
                 regionMin = minPrice;
+                regionMinDC = dc;
                 regionMinWorld = worldName;
               }
               // last_upload_at: そのワールドの出品の中で最新のもの
@@ -131,7 +134,7 @@ function buildRegionGroups(prices: PriceByWorld[]): RegionGroup[] {
         })
         .sort((a, b) => a.data_center.localeCompare(b.data_center));
 
-      return { region, dcs, min_price: regionMin, min_world: regionMinWorld };
+      return { region, dcs, min_price: regionMin, min_dc: regionMinDC, min_world: regionMinWorld };
     });
 }
 
@@ -669,7 +672,7 @@ export default function ItemDetailPage({ params }: Props) {
                   最安 {formatGil(rg.min_price)}
                   {rg.min_world && (
                     <span className="ml-1 text-[var(--muted-foreground)]">
-                      ({rg.min_world})
+                      ({rg.min_dc} - {rg.min_world})
                     </span>
                   )}
                 </span>
