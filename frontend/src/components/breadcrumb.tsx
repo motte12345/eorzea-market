@@ -9,29 +9,25 @@ interface Crumb {
   href?: string;
 }
 
-function useItemName(itemId: number | null) {
-  const { data } = useQuery({
+export function Breadcrumb() {
+  const pathname = usePathname();
+  const segments = pathname.split("/").filter(Boolean);
+
+  // /market/items/[id] のパターンからアイテムIDを抽出
+  const isItemPage =
+    segments[0] === "market" && segments[1] === "items" && !!segments[2];
+  const itemId = isItemPage ? Number(segments[2]) : null;
+
+  // hooks は常に呼ぶ（条件分岐の前に）
+  const { data: itemData } = useQuery({
     queryKey: ["item", itemId],
     queryFn: () => getItem(itemId!),
     enabled: itemId !== null,
   });
-  return data?.name_ja || data?.name_en || null;
-}
-
-export function Breadcrumb() {
-  const pathname = usePathname();
-
-  // パスを解析してパンくずを生成
-  const segments = pathname.split("/").filter(Boolean);
+  const itemName = itemData?.name_ja || itemData?.name_en || null;
 
   // トップページでは表示しない
   if (segments.length === 0) return null;
-
-  // /market/items/[id] のパターンからアイテムIDを抽出
-  const isItemPage =
-    segments[0] === "market" && segments[1] === "items" && segments[2];
-  const itemId = isItemPage ? Number(segments[2]) : null;
-  const itemName = useItemName(itemId);
 
   const crumbs: Crumb[] = [{ label: "QP Tools", href: "/" }];
 
@@ -43,7 +39,6 @@ export function Breadcrumb() {
     }
   }
 
-  // 1階層（/market のみ）なら表示不要
   if (crumbs.length <= 1) return null;
 
   return (
