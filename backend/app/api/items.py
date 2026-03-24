@@ -1,35 +1,13 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from datetime import datetime, timezone
 
 from app.collector.scheduler import mark_items_requested
 from app.database import get_db
 from app.models.item import Item
 from app.services.universalis_proxy import fetch_item_prices_live, fetch_item_history_live
-
-from app.collector.bulk_fetch import fetch_bulk_listings
-from app.config import settings
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-
-_bg_engine = None
-_bg_session_factory = None
-
-
-def _get_bg_session_factory():
-    global _bg_engine, _bg_session_factory
-    if _bg_session_factory is None:
-        _bg_engine = create_async_engine(settings.database_url)
-        _bg_session_factory = async_sessionmaker(_bg_engine, expire_on_commit=False)
-    return _bg_session_factory
-
-
-async def _bg_fetch_and_store(item_id: int):
-    """バックグラウンドでUniversalisからデータを取得してDBに保存"""
-    session_factory = _get_bg_session_factory()
-    try:
-        await fetch_bulk_listings(session_factory, [item_id], batch_size=1, save_history=False)
-    except Exception:
-        pass  # バックグラウンドなので握りつぶす
 from app.models.listing import Listing
 from app.models.price_summary import PriceSummary
 from app.models.sale_history import SaleHistory
@@ -37,6 +15,44 @@ from app.models.world import World
 from app.schemas.item import ItemResponse, ItemSearchResponse, PriceByWorldResponse
 
 router = APIRouter()
+
+
+async def _save_proxy_listings(item_id: int, listings: list[dict], db: AsyncSession) -> None:
+    """プロキシで取得した出品データをDBに保存"""
+    try:
+        # ワールド名→IDマッピング
+        result = await db.execute(select(World))
+        world_map = {w.name: w.id for w in result.scalars().all()}
+
+        # 既存データ削除
+        from sqlalchemy import delete
+        await db.execute(delete(Listing).where(Listing.item_id == item_id))
+
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        for l in listings:
+            world_id = world_map.get(l.get("world_name", ""))
+            if world_id is None:
+                continue
+            last_upload = None
+            if l.get("last_upload_at"):
+                try:
+                    last_upload = datetime.fromisoformat(l["last_upload_at"]).replace(tzinfo=None)
+                except (ValueError, TypeError):
+                    pass
+            db.add(Listing(
+                item_id=item_id,
+                world_id=world_id,
+                price_per_unit=l.get("price_per_unit", 0),
+                quantity=l.get("quantity", 0),
+                total=l.get("price_per_unit", 0) * l.get("quantity", 0),
+                hq=l.get("hq", False),
+                retainer_name=l.get("retainer_name", ""),
+                fetched_at=now,
+                last_upload_at=last_upload,
+            ))
+        await db.commit()
+    except Exception:
+        await db.rollback()
 
 
 @router.get("/search", response_model=list[ItemSearchResponse])
@@ -71,7 +87,6 @@ async def get_item_prices(
     item_id: int,
     hq: bool | None = None,
     db: AsyncSession = Depends(get_db),
-    background_tasks: BackgroundTasks = BackgroundTasks(),
 ):
     """アイテムの全ワールド価格一覧（DBにあればDB、なければAPIプロキシ）"""
     # DBから取得を試みる
@@ -101,9 +116,9 @@ async def get_item_prices(
     if rows:
         return rows
 
-    # Universalis API から直接取得 + バックグラウンドでDB保存
+    # Universalis API から直接取得 + DB保存
     listings = await fetch_item_prices_live(item_id)
-    background_tasks.add_task(_bg_fetch_and_store, item_id)
+    await _save_proxy_listings(item_id, listings, db)
     if hq is not None:
         listings = [l for l in listings if l["hq"] == hq]
     return listings
