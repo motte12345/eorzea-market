@@ -6,6 +6,7 @@ import {
   getWatchlistPrices,
   getExpensiveItems,
   getArbitrageItems,
+  getArbitrageProfitItems,
   type WatchlistItem,
   type RankingItem,
 } from "@/lib/api";
@@ -75,8 +76,16 @@ export default function HomePage() {
     staleTime: 10 * 60 * 1000,
   });
 
+  const { data: arbitrageProfitItems } = useQuery({
+    queryKey: ["ranking-arbitrage-profit"],
+    queryFn: () => getArbitrageProfitItems(20),
+    staleTime: 10 * 60 * 1000,
+  });
+
   const [expExpanded, setExpExpanded] = useState(false);
   const [arbExpanded, setArbExpanded] = useState(false);
+  const [arbMode, setArbMode] = useState<"rate" | "profit">("rate");
+  const [arbExcludeDCs, setArbExcludeDCs] = useState<string[]>([]);
 
   function handleRemove(itemId: number) {
     const updated = removeItem(itemId);
@@ -292,10 +301,10 @@ export default function HomePage() {
                       key={item.item_id}
                       className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)] transition-colors"
                     >
-                      <td className="px-4 py-2 w-8 text-center text-[var(--muted-foreground)]">
+                      <td className="px-4 py-2.5 w-8 text-center text-[var(--muted-foreground)]">
                         {i + 1}
                       </td>
-                      <td className="py-2">
+                      <td className="py-2.5">
                         <a
                           href={`/market/items/${item.item_id}`}
                           className="flex items-center gap-2 hover:text-[var(--primary)]"
@@ -308,7 +317,7 @@ export default function HomePage() {
                           </span>
                         </a>
                       </td>
-                      <td className="px-4 py-2 text-right font-mono text-[var(--primary)]">
+                      <td className="px-4 py-2.5 text-right font-mono text-[var(--primary)]">
                         {formatGil(item.min_price ?? 0)}
                       </td>
                     </tr>
@@ -331,73 +340,101 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* 利益率ランキング */}
+        {/* 転売ランキング */}
         <div className="rounded-lg border border-[var(--border)] bg-[var(--card)]">
-          <div className="border-b border-[var(--border)] px-4 py-3">
-            <h3 className="font-bold">利益率ランキング TOP5</h3>
+          <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
+            <h3 className="font-bold">転売ランキング</h3>
+            <div className="flex rounded-md border border-[var(--border)]">
+              <button
+                onClick={() => { setArbMode("rate"); setArbExpanded(false); }}
+                className={`px-2 py-0.5 text-xs ${
+                  arbMode === "rate"
+                    ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                    : "text-[var(--muted-foreground)]"
+                }`}
+              >
+                利益率順
+              </button>
+              <button
+                onClick={() => { setArbMode("profit"); setArbExpanded(false); }}
+                className={`px-2 py-0.5 text-xs ${
+                  arbMode === "profit"
+                    ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                    : "text-[var(--muted-foreground)]"
+                }`}
+              >
+                差額順
+              </button>
+            </div>
           </div>
-          {arbitrageItems && arbitrageItems.length > 0 ? (
-            <>
-              <table className="w-full text-sm">
-                <tbody>
-                  {arbitrageItems.slice(0, arbExpanded ? 20 : 5).map((item, i) => {
-                    const buyDC = item.buy_info?.split(":")[0] ?? "";
-                    const buyWorld = item.buy_info?.split(":")[1] ?? "";
-                    const sellDC = item.sell_info?.split(":")[0] ?? "";
-                    const sellWorld = item.sell_info?.split(":")[1] ?? "";
-                    return (
-                      <tr
-                        key={item.item_id}
-                        className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)] transition-colors"
-                      >
-                        <td className="px-4 py-2 w-8 text-center text-[var(--muted-foreground)]">
-                          {i + 1}
-                        </td>
-                        <td className="py-2">
-                          <a
-                            href={`/market/items/${item.item_id}`}
-                            className="flex items-center gap-2 hover:text-[var(--primary)]"
-                          >
-                            {item.icon_url && (
-                              <img src={item.icon_url} alt="" className="h-6 w-6" />
-                            )}
-                            <div className="min-w-0">
-                              <div className="truncate">
-                                {item.name_ja || item.name_en}
+          {(() => {
+            const sourceItems = arbMode === "rate" ? arbitrageItems : arbitrageProfitItems;
+            const filtered = sourceItems?.filter((item) => {
+              const buyDC = item.buy_info?.split(":")[0] ?? "";
+              const sellDC = item.sell_info?.split(":")[0] ?? "";
+              return !arbExcludeDCs.includes(buyDC) && !arbExcludeDCs.includes(sellDC);
+            });
+            return filtered && filtered.length > 0 ? (
+              <>
+                <table className="w-full text-sm">
+                  <tbody>
+                    {filtered.slice(0, arbExpanded ? 20 : 5).map((item, i) => {
+                      const buyDC = item.buy_info ?? "";
+                      const sellDC = item.sell_info ?? "";
+                      return (
+                        <tr
+                          key={item.item_id}
+                          className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)] transition-colors"
+                        >
+                          <td className="px-4 py-2.5 w-8 text-center text-[var(--muted-foreground)]">
+                            {i + 1}
+                          </td>
+                          <td className="py-2.5">
+                            <a
+                              href={`/market/items/${item.item_id}`}
+                              className="flex items-center gap-2 hover:text-[var(--primary)]"
+                            >
+                              {item.icon_url && (
+                                <img src={item.icon_url} alt="" className="h-6 w-6" />
+                              )}
+                              <div className="min-w-0">
+                                <div className="truncate">
+                                  {item.name_ja || item.name_en}
+                                </div>
+                                <div className="text-[10px] text-[var(--muted-foreground)]">
+                                  {buyDC} → {sellDC}
+                                </div>
                               </div>
-                              <div className="text-[10px] text-[var(--muted-foreground)]">
-                                {buyDC} {buyWorld} → {sellDC} {sellWorld}
-                              </div>
+                            </a>
+                          </td>
+                          <td className="px-4 py-2.5 text-right">
+                            <div className="font-mono text-[var(--positive)]">
+                              +{formatGil(item.profit ?? 0)}
                             </div>
-                          </a>
-                        </td>
-                        <td className="px-4 py-2 text-right">
-                          <div className="font-mono text-[var(--positive)]">
-                            +{formatGil(item.profit ?? 0)}
-                          </div>
-                          <div className="text-[10px] text-[var(--muted-foreground)]">
-                            {item.profit_rate}%
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              {arbitrageItems.length > 5 && (
-                <button
-                  onClick={() => setArbExpanded((v) => !v)}
-                  className="w-full border-t border-[var(--border)] py-2 text-center text-xs text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors"
-                >
-                  {arbExpanded ? "折りたたむ" : `他 ${arbitrageItems.length - 5} 件を表示`}
-                </button>
-              )}
-            </>
-          ) : (
-            <p className="px-4 py-6 text-center text-sm text-[var(--muted-foreground)]">
-              データ取得中...
-            </p>
-          )}
+                            <div className="text-[10px] text-[var(--muted-foreground)]">
+                              {item.profit_rate}%
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {filtered.length > 5 && (
+                  <button
+                    onClick={() => setArbExpanded((v) => !v)}
+                    className="w-full border-t border-[var(--border)] py-2 text-center text-xs text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors"
+                  >
+                    {arbExpanded ? "折りたたむ" : `他 ${filtered.length - 5} 件を表示`}
+                  </button>
+                )}
+              </>
+            ) : (
+              <p className="px-4 py-6 text-center text-sm text-[var(--muted-foreground)]">
+                データ取得中...
+              </p>
+            );
+          })()}
         </div>
       </section>
     </div>

@@ -11,33 +11,35 @@ from app.models.ranking_cache import RankingCache
 router = APIRouter()
 
 
-@router.get("/expensive")
-async def get_expensive_items(
-    limit: int = Query(5, le=20),
-    db: AsyncSession = Depends(get_db),
-):
-    """高額アイテムトップN"""
+async def _get_cached(db: AsyncSession, ranking_type: str, limit: int) -> list:
     result = await db.execute(
-        select(RankingCache).where(RankingCache.ranking_type == "expensive")
+        select(RankingCache).where(RankingCache.ranking_type == ranking_type)
     )
     cache = result.scalar_one_or_none()
     if not cache:
         return []
-    data = json.loads(cache.data_json)
-    return data[:limit]
+    return json.loads(cache.data_json)[:limit]
+
+
+@router.get("/expensive")
+async def get_expensive_items(
+    limit: int = Query(20, le=50),
+    db: AsyncSession = Depends(get_db),
+):
+    return await _get_cached(db, "expensive", limit)
 
 
 @router.get("/arbitrage")
 async def get_arbitrage_items(
-    limit: int = Query(5, le=20),
+    limit: int = Query(20, le=50),
     db: AsyncSession = Depends(get_db),
 ):
-    """利益率が高いアイテムトップN"""
-    result = await db.execute(
-        select(RankingCache).where(RankingCache.ranking_type == "arbitrage")
-    )
-    cache = result.scalar_one_or_none()
-    if not cache:
-        return []
-    data = json.loads(cache.data_json)
-    return data[:limit]
+    return await _get_cached(db, "arbitrage", limit)
+
+
+@router.get("/arbitrage-profit")
+async def get_arbitrage_profit_items(
+    limit: int = Query(20, le=50),
+    db: AsyncSession = Depends(get_db),
+):
+    return await _get_cached(db, "arbitrage_profit", limit)

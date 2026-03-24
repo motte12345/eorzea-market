@@ -137,8 +137,12 @@ export async function getExpensiveItems(limit = 5): Promise<RankingItem[]> {
   return fetchJson(`/ranking/expensive?limit=${limit}`);
 }
 
-export async function getArbitrageItems(limit = 5): Promise<RankingItem[]> {
+export async function getArbitrageItems(limit = 20): Promise<RankingItem[]> {
   return fetchJson(`/ranking/arbitrage?limit=${limit}`);
+}
+
+export async function getArbitrageProfitItems(limit = 20): Promise<RankingItem[]> {
+  return fetchJson(`/ranking/arbitrage-profit?limit=${limit}`);
 }
 
 export async function refreshItem(itemId: number): Promise<void> {

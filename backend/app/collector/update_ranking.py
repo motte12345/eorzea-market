@@ -21,6 +21,7 @@ INCLUDED_REGIONS = ("Japan", "North-America", "Europe", "Oceania")
 # ランキングから除外するアイテムID
 EXCLUDED_ITEM_IDS: list[int] = [
     5859, 39494, 33687, 39493, 33688,
+    5852, 5867, 2821,
 ]
 
 
@@ -114,10 +115,10 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
                 WHERE a.item_id NOT IN ({excluded_sql})
                     AND ROUND((a.max_price - a.min_price) / a.min_price * 100, 1) <= 1000
                 ORDER BY profit_rate DESC
-                LIMIT 20
+                LIMIT 50
             """)
         )
-        arbitrage = [
+        all_arb = [
             {
                 "item_id": r.item_id,
                 "name_ja": r.name_ja,
@@ -133,10 +134,19 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
             for r in arb_result.all()
         ]
 
+        # 利益率順 TOP20
+        arbitrage_rate = sorted(all_arb, key=lambda x: x["profit_rate"], reverse=True)[:20]
+        # 差額順 TOP20
+        arbitrage_profit = sorted(all_arb, key=lambda x: x["profit"], reverse=True)[:20]
+
         now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # キャッシュに保存（UPSERT）
-        for ranking_type, data in [("expensive", expensive), ("arbitrage", arbitrage)]:
+        for ranking_type, data in [
+            ("expensive", expensive),
+            ("arbitrage", arbitrage_rate),
+            ("arbitrage_profit", arbitrage_profit),
+        ]:
             existing = await session.execute(
                 select(RankingCache).where(RankingCache.ranking_type == ranking_type)
             )
