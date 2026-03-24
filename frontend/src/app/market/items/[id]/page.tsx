@@ -153,19 +153,31 @@ export default function ItemDetailPage({ params }: Props) {
     enabled: activeTab === "history",
   });
 
-  // 公式ツールチップの再初期化
+  // 公式ツールチップ: overflow:hidden を監視して visible に修正
   useEffect(() => {
-    if (item?.lodestone_id) {
-      const w = window as unknown as Record<string, unknown>;
-      const edb = w.eorzeadb as Record<string, unknown> | undefined;
-      if (edb && typeof edb.init === "function") {
-        const jq = w.jQuery as (() => void) | undefined;
-        if (jq) {
-          (edb.init as (jq: unknown) => void)(jq);
-        }
+    const fixTooltip = () => {
+      const el = document.getElementById("eorzeadb_tooltip");
+      if (el) {
+        el.style.overflow = "visible";
+        el.style.zIndex = "99999";
       }
-    }
-  }, [item]);
+    };
+
+    // MutationObserver でスタイル変更を監視
+    const observer = new MutationObserver(fixTooltip);
+    const tryObserve = () => {
+      const el = document.getElementById("eorzeadb_tooltip");
+      if (el) {
+        observer.observe(el, { attributes: true, attributeFilter: ["style"] });
+        fixTooltip();
+      } else {
+        setTimeout(tryObserve, 500);
+      }
+    };
+    tryObserve();
+
+    return () => observer.disconnect();
+  }, []);
 
   const { data: priceHistory } = useQuery({
     queryKey: ["item-price-history", itemId],
