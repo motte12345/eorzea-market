@@ -25,6 +25,7 @@ interface Props {
 }
 
 type Tab = "listings" | "history" | "chart";
+type ListingSort = "price-asc" | "price-desc" | "server";
 
 const REGION_ORDER = ["Japan", "North-America", "Europe", "Oceania"];
 
@@ -48,6 +49,18 @@ interface RegionGroup {
   dcs: DCGroup[];
   min_price: number;
   min_world: string;
+}
+
+function sortWorlds(worlds: WorldSummary[], sort: ListingSort): WorldSummary[] {
+  const sorted = [...worlds];
+  switch (sort) {
+    case "price-asc":
+      return sorted.sort((a, b) => a.min_price - b.min_price);
+    case "price-desc":
+      return sorted.sort((a, b) => b.min_price - a.min_price);
+    case "server":
+      return sorted.sort((a, b) => a.world_name.localeCompare(b.world_name));
+  }
 }
 
 function buildRegionGroups(prices: PriceByWorld[]): RegionGroup[] {
@@ -380,6 +393,7 @@ export default function ItemDetailPage({ params }: Props) {
   const [hqFilter, setHqFilter] = useState<boolean | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [historyServer, setHistoryServer] = useState(initialServer);
+  const [listingSort, setListingSort] = useState<ListingSort>("price-asc");
   const [expandedWorlds, setExpandedWorlds] = useState<Set<string>>(new Set());
   const [inWatchlist, setInWatchlist] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -571,24 +585,35 @@ export default function ItemDetailPage({ params }: Props) {
         </div>
 
         {activeTab === "listings" && (
-          <div className="flex gap-1 pb-1">
-            {[
-              { label: "All", value: undefined },
-              { label: "HQ", value: true },
-              { label: "NQ", value: false },
-            ].map((opt) => (
-              <button
-                key={String(opt.value)}
-                onClick={() => setHqFilter(opt.value)}
-                className={`rounded px-2.5 py-1 text-xs font-medium ${
-                  hqFilter === opt.value
-                    ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-                    : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
+          <div className="flex items-center gap-3 pb-1">
+            <div className="flex gap-1">
+              {[
+                { label: "All", value: undefined },
+                { label: "HQ", value: true },
+                { label: "NQ", value: false },
+              ].map((opt) => (
+                <button
+                  key={String(opt.value)}
+                  onClick={() => setHqFilter(opt.value)}
+                  className={`rounded px-2.5 py-1 text-xs font-medium ${
+                    hqFilter === opt.value
+                      ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                      : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <select
+              value={listingSort}
+              onChange={(e) => setListingSort(e.target.value as ListingSort)}
+              className="rounded border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-xs text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none"
+            >
+              <option value="price-asc">安い順</option>
+              <option value="price-desc">高い順</option>
+              <option value="server">サーバー名順</option>
+            </select>
           </div>
         )}
       </div>
@@ -677,8 +702,11 @@ export default function ItemDetailPage({ params }: Props) {
                           </tr>
                         </thead>
                         <tbody>
-                          {dc.worlds.map((world) => {
+                          {sortWorlds(dc.worlds, listingSort).map((world) => {
                             const worldKey = `${dc.data_center}:${world.world_name}`;
+                            const dcMaxPrice = Math.max(
+                              ...dc.worlds.map((w) => w.min_price)
+                            );
                             const isExpanded = expandedWorlds.has(worldKey);
                             return (
                               <>
@@ -704,9 +732,11 @@ export default function ItemDetailPage({ params }: Props) {
                                   </td>
                                   <td
                                     className={`px-3 py-1.5 text-right font-mono ${
-                                      world.min_price === globalMin
+                                      world.min_price === dcMin
                                         ? "font-bold text-[var(--positive)]"
-                                        : ""
+                                        : world.min_price === dcMaxPrice
+                                          ? "text-[var(--destructive)]"
+                                          : ""
                                     }`}
                                   >
                                     {formatGil(world.min_price)}
