@@ -679,7 +679,7 @@ export default function ItemDetailPage({ params }: Props) {
               </h3>
               <div className="grid gap-3 md:grid-cols-2">
                 {rg.dcs.map((dc) => {
-                  const dcMin = dc.worlds[0]?.min_price ?? 0;
+                  const dcMin = Math.min(...dc.worlds.map((w) => w.min_price));
                   return (
                     <div
                       key={dc.data_center}
