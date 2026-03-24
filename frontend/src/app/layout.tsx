@@ -18,16 +18,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja">
-      <body>
+      <head>
         <script
           dangerouslySetInnerHTML={{
             __html: `var eorzeadb = { dynamic_tooltip: true };`,
           }}
         />
-        <script
-          src="https://lds-img.finalfantasyxiv.com/pc/global/js/eorzeadb/loader.js?v3"
-          async
-        />
+        <script src="https://lds-img.finalfantasyxiv.com/pc/global/js/eorzeadb/loader.js?v3" />
+      </head>
+      <body>
         <Providers>
           <Header />
           <Breadcrumb />
