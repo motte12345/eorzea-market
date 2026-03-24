@@ -92,42 +92,42 @@ export default function HomePage() {
       <section>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-bold">ウォッチリスト</h2>
-          <div className="flex items-center gap-4">
-            <TaxSelect value={taxIndex} onChange={handleTaxChange} />
-            {itemIds.length > 0 && (
-              <span className="text-sm text-[var(--muted-foreground)]">
-                {itemIds.length} アイテム
-              </span>
-            )}
-          </div>
+          {itemIds.length > 0 && (
+            <span className="text-sm text-[var(--muted-foreground)]">
+              {itemIds.length} アイテム
+            </span>
+          )}
         </div>
 
-        {/* 差益対象リージョン設定 */}
+        {/* 差益設定 */}
         {itemIds.length > 0 && (
-          <div className="flex items-center gap-3 text-xs">
-            <span className="text-[var(--muted-foreground)]">差益比較:</span>
-            {REGIONS.map((r) => (
-              <label
-                key={r}
-                className="flex cursor-pointer items-center gap-1"
-              >
-                <input
-                  type="checkbox"
-                  checked={arbRegions.includes(r)}
-                  onChange={() => toggleArbRegion(r)}
-                  className="accent-[var(--primary)]"
-                />
-                <span
-                  className={
-                    arbRegions.includes(r)
-                      ? "text-[var(--foreground)]"
-                      : "text-[var(--muted-foreground)]"
-                  }
+          <div className="mb-3 flex flex-wrap items-center gap-4 text-xs">
+            <div className="flex items-center gap-3">
+              <span className="text-[var(--muted-foreground)]">差益比較:</span>
+              {REGIONS.map((r) => (
+                <label
+                  key={r}
+                  className="flex cursor-pointer items-center gap-1"
                 >
-                  {REGION_SHORT[r]}
-                </span>
-              </label>
-            ))}
+                  <input
+                    type="checkbox"
+                    checked={arbRegions.includes(r)}
+                    onChange={() => toggleArbRegion(r)}
+                    className="accent-[var(--primary)]"
+                  />
+                  <span
+                    className={
+                      arbRegions.includes(r)
+                        ? "text-[var(--foreground)]"
+                        : "text-[var(--muted-foreground)]"
+                    }
+                  >
+                    {REGION_SHORT[r]}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <TaxSelect value={taxIndex} onChange={handleTaxChange} />
           </div>
         )}
 
