@@ -119,7 +119,7 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
                 ) a
                 JOIN items i ON a.item_id = i.id
                 WHERE a.item_id NOT IN ({excluded_sql})
-                    AND profit_rate <= 1000
+                    AND ROUND((a.max_price - a.min_price) / a.min_price * 100, 1) <= 1000
                 ORDER BY profit_rate DESC
                 LIMIT 20
             """)
