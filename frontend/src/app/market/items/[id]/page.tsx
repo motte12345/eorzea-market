@@ -139,7 +139,23 @@ function buildRegionGroups(prices: PriceByWorld[]): RegionGroup[] {
     });
 }
 
-const REGION_DC_ORDER: Record<string, string[]> = {};
+// DC → リージョン順のマッピング
+const DC_REGION: Record<string, string> = {
+  // Japan
+  Elemental: "Japan", Gaia: "Japan", Mana: "Japan", Meteor: "Japan",
+  // North-America
+  Aether: "North-America", Crystal: "North-America", Dynamis: "North-America", Primal: "North-America",
+  // Europe
+  Chaos: "Europe", Light: "Europe",
+  // Oceania
+  Materia: "Oceania",
+};
+
+function dcSortKey(dc: string): number {
+  const region = DC_REGION[dc] || dc;
+  const idx = REGION_ORDER.indexOf(region);
+  return idx >= 0 ? idx : 99;
+}
 
 interface HistoryWorldGroup {
   world_name: string;
@@ -184,7 +200,7 @@ function buildHistoryGroups(
   }
 
   return Array.from(dcMap.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => dcSortKey(a) - dcSortKey(b) || a.localeCompare(b))
     .map(([dc, worldMap]) => ({
       region: dc,
       dcs: [
