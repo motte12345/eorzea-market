@@ -29,17 +29,16 @@ export function Breadcrumb() {
   // トップページでは表示しない
   if (segments.length === 0) return null;
 
-  const crumbs: Crumb[] = [{ label: "QP Tools", href: "/" }];
+  const crumbs: Crumb[] = [];
 
   if (segments[0] === "market") {
-    crumbs.push({ label: "マーケット", href: "/market" });
-
     if (isItemPage) {
+      crumbs.push({ label: "マーケット", href: "/market" });
       crumbs.push({ label: itemName || `#${itemId}` });
     }
   }
 
-  if (crumbs.length <= 1) return null;
+  if (crumbs.length === 0) return null;
 
   return (
     <nav className="mx-auto max-w-7xl px-6 pt-3">

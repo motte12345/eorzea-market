@@ -1,37 +1,29 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
-import { ItemSearch } from "@/components/item-search";
-import type { ItemSearchResult } from "@/lib/api";
+import { usePathname } from "next/navigation";
 
 export function Header() {
-  const router = useRouter();
   const pathname = usePathname();
-  const showSearch = pathname.startsWith("/market");
-
-  function handleSelect(item: ItemSearchResult) {
-    router.push(`/market/items/${item.id}`);
-  }
+  const isMarket = pathname.startsWith("/market");
 
   return (
     <header className="border-b border-[var(--border)] px-6 py-3">
-      <div className="mx-auto flex max-w-7xl items-center gap-4">
-        <a href="/" className="flex flex-shrink-0 items-center gap-2">
-          <img src="/icon.png" alt="" className="h-8 w-8" />
-          <span className="text-xl font-bold text-[var(--primary)]">
-            QP Tools
-          </span>
-        </a>
-
-        {showSearch && (
-          <div className="flex-1">
-            <ItemSearch
-              onSelect={handleSelect}
-              placeholder="アイテム検索..."
-            />
-          </div>
+      <div className="mx-auto flex max-w-7xl items-center justify-between">
+        {isMarket ? (
+          <a href="/market" className="flex items-center gap-2">
+            <img src="/market-icon.png" alt="" className="h-8 w-8" />
+            <span className="text-xl font-bold text-[var(--primary)]">
+              Eorzea Market
+            </span>
+          </a>
+        ) : (
+          <a href="/" className="flex items-center gap-2">
+            <img src="/icon.png" alt="" className="h-8 w-8" />
+            <span className="text-xl font-bold text-[var(--primary)]">
+              QP Tools
+            </span>
+          </a>
         )}
-        {!showSearch && <div className="flex-1" />}
 
         <nav className="flex flex-shrink-0 gap-4 text-sm">
           <a href="/" className="hover:text-[var(--primary)]">
