@@ -21,7 +21,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `var eorzeadb = { dynamic_tooltip: true };`,
+            __html: `var eorzeadb = { dynamic_tooltip: false };`,
           }}
         />
         <script src="https://lds-img.finalfantasyxiv.com/pc/global/js/eorzeadb/loader.js?v3" />
