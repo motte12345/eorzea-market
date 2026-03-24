@@ -27,9 +27,6 @@ export default function PortalPage() {
         <h1 className="text-4xl font-bold text-[var(--primary)]">
           QP Tools
         </h1>
-        <p className="mt-3 text-[var(--muted-foreground)]">
-          FFXIV プレイヤー向けツール集
-        </p>
       </div>
 
       <div className="grid w-full max-w-3xl gap-4 sm:grid-cols-2">
