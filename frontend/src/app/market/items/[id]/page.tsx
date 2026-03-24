@@ -137,16 +137,6 @@ export default function ItemDetailPage({ params }: Props) {
     setInWatchlist(isInWatchlist(itemId));
   }, [itemId]);
 
-  // 公式ツールチップの再初期化
-  useEffect(() => {
-    if (item) {
-      const w = window as unknown as Record<string, unknown>;
-      if (typeof w.eorzeadb_parse_links === "function") {
-        (w.eorzeadb_parse_links as () => void)();
-      }
-    }
-  }, [item]);
-
   const { data: item } = useQuery({
     queryKey: ["item", itemId],
     queryFn: () => getItem(itemId),
@@ -162,6 +152,16 @@ export default function ItemDetailPage({ params }: Props) {
     queryFn: () => getItemHistory(itemId, 100),
     enabled: activeTab === "history",
   });
+
+  // 公式ツールチップの再初期化
+  useEffect(() => {
+    if (item) {
+      const w = window as unknown as Record<string, unknown>;
+      if (typeof w.eorzeadb_parse_links === "function") {
+        (w.eorzeadb_parse_links as () => void)();
+      }
+    }
+  }, [item]);
 
   const { data: priceHistory } = useQuery({
     queryKey: ["item-price-history", itemId],
