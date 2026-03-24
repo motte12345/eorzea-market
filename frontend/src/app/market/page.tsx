@@ -65,15 +65,18 @@ export default function HomePage() {
 
   const { data: expensiveItems } = useQuery({
     queryKey: ["ranking-expensive"],
-    queryFn: () => getExpensiveItems(5),
+    queryFn: () => getExpensiveItems(20),
     staleTime: 10 * 60 * 1000,
   });
 
   const { data: arbitrageItems } = useQuery({
     queryKey: ["ranking-arbitrage"],
-    queryFn: () => getArbitrageItems(5),
+    queryFn: () => getArbitrageItems(20),
     staleTime: 10 * 60 * 1000,
   });
+
+  const [expExpanded, setExpExpanded] = useState(false);
+  const [arbExpanded, setArbExpanded] = useState(false);
 
   function handleRemove(itemId: number) {
     const updated = removeItem(itemId);
@@ -281,57 +284,10 @@ export default function HomePage() {
             <h3 className="font-bold">高額アイテム TOP5</h3>
           </div>
           {expensiveItems && expensiveItems.length > 0 ? (
-            <table className="w-full text-sm">
-              <tbody>
-                {expensiveItems.map((item, i) => (
-                  <tr
-                    key={item.item_id}
-                    className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)] transition-colors"
-                  >
-                    <td className="px-4 py-2 w-8 text-center text-[var(--muted-foreground)]">
-                      {i + 1}
-                    </td>
-                    <td className="py-2">
-                      <a
-                        href={`/market/items/${item.item_id}`}
-                        className="flex items-center gap-2 hover:text-[var(--primary)]"
-                      >
-                        {item.icon_url && (
-                          <img src={item.icon_url} alt="" className="h-6 w-6" />
-                        )}
-                        <span className="truncate">
-                          {item.name_ja || item.name_en}
-                        </span>
-                      </a>
-                    </td>
-                    <td className="px-4 py-2 text-right font-mono text-[var(--primary)]">
-                      {formatGil(item.min_price ?? 0)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p className="px-4 py-6 text-center text-sm text-[var(--muted-foreground)]">
-              データ取得中...
-            </p>
-          )}
-        </div>
-
-        {/* 利益率ランキング */}
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--card)]">
-          <div className="border-b border-[var(--border)] px-4 py-3">
-            <h3 className="font-bold">利益率ランキング TOP5</h3>
-          </div>
-          {arbitrageItems && arbitrageItems.length > 0 ? (
-            <table className="w-full text-sm">
-              <tbody>
-                {arbitrageItems.map((item, i) => {
-                  const buyDC = item.buy_info?.split(":")[0] ?? "";
-                  const buyWorld = item.buy_info?.split(":")[1] ?? "";
-                  const sellDC = item.sell_info?.split(":")[0] ?? "";
-                  const sellWorld = item.sell_info?.split(":")[1] ?? "";
-                  return (
+            <>
+              <table className="w-full text-sm">
+                <tbody>
+                  {expensiveItems.slice(0, expExpanded ? 20 : 5).map((item, i) => (
                     <tr
                       key={item.item_id}
                       className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)] transition-colors"
@@ -347,29 +303,96 @@ export default function HomePage() {
                           {item.icon_url && (
                             <img src={item.icon_url} alt="" className="h-6 w-6" />
                           )}
-                          <div className="min-w-0">
-                            <div className="truncate">
-                              {item.name_ja || item.name_en}
-                            </div>
-                            <div className="text-[10px] text-[var(--muted-foreground)]">
-                              {buyDC} {buyWorld} → {sellDC} {sellWorld}
-                            </div>
-                          </div>
+                          <span className="truncate">
+                            {item.name_ja || item.name_en}
+                          </span>
                         </a>
                       </td>
-                      <td className="px-4 py-2 text-right">
-                        <div className="font-mono text-[var(--positive)]">
-                          +{formatGil(item.profit ?? 0)}
-                        </div>
-                        <div className="text-[10px] text-[var(--muted-foreground)]">
-                          {item.profit_rate}%
-                        </div>
+                      <td className="px-4 py-2 text-right font-mono text-[var(--primary)]">
+                        {formatGil(item.min_price ?? 0)}
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+              {expensiveItems.length > 5 && (
+                <button
+                  onClick={() => setExpExpanded((v) => !v)}
+                  className="w-full border-t border-[var(--border)] py-2 text-center text-xs text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors"
+                >
+                  {expExpanded ? "折りたたむ" : `他 ${expensiveItems.length - 5} 件を表示`}
+                </button>
+              )}
+            </>
+          ) : (
+            <p className="px-4 py-6 text-center text-sm text-[var(--muted-foreground)]">
+              データ取得中...
+            </p>
+          )}
+        </div>
+
+        {/* 利益率ランキング */}
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--card)]">
+          <div className="border-b border-[var(--border)] px-4 py-3">
+            <h3 className="font-bold">利益率ランキング TOP5</h3>
+          </div>
+          {arbitrageItems && arbitrageItems.length > 0 ? (
+            <>
+              <table className="w-full text-sm">
+                <tbody>
+                  {arbitrageItems.slice(0, arbExpanded ? 20 : 5).map((item, i) => {
+                    const buyDC = item.buy_info?.split(":")[0] ?? "";
+                    const buyWorld = item.buy_info?.split(":")[1] ?? "";
+                    const sellDC = item.sell_info?.split(":")[0] ?? "";
+                    const sellWorld = item.sell_info?.split(":")[1] ?? "";
+                    return (
+                      <tr
+                        key={item.item_id}
+                        className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)] transition-colors"
+                      >
+                        <td className="px-4 py-2 w-8 text-center text-[var(--muted-foreground)]">
+                          {i + 1}
+                        </td>
+                        <td className="py-2">
+                          <a
+                            href={`/market/items/${item.item_id}`}
+                            className="flex items-center gap-2 hover:text-[var(--primary)]"
+                          >
+                            {item.icon_url && (
+                              <img src={item.icon_url} alt="" className="h-6 w-6" />
+                            )}
+                            <div className="min-w-0">
+                              <div className="truncate">
+                                {item.name_ja || item.name_en}
+                              </div>
+                              <div className="text-[10px] text-[var(--muted-foreground)]">
+                                {buyDC} {buyWorld} → {sellDC} {sellWorld}
+                              </div>
+                            </div>
+                          </a>
+                        </td>
+                        <td className="px-4 py-2 text-right">
+                          <div className="font-mono text-[var(--positive)]">
+                            +{formatGil(item.profit ?? 0)}
+                          </div>
+                          <div className="text-[10px] text-[var(--muted-foreground)]">
+                            {item.profit_rate}%
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {arbitrageItems.length > 5 && (
+                <button
+                  onClick={() => setArbExpanded((v) => !v)}
+                  className="w-full border-t border-[var(--border)] py-2 text-center text-xs text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors"
+                >
+                  {arbExpanded ? "折りたたむ" : `他 ${arbitrageItems.length - 5} 件を表示`}
+                </button>
+              )}
+            </>
           ) : (
             <p className="px-4 py-6 text-center text-sm text-[var(--muted-foreground)]">
               データ取得中...

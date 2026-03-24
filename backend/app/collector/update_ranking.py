@@ -18,9 +18,9 @@ logger = logging.getLogger(__name__)
 # 集計対象リージョン（中国・韓国を除外）
 INCLUDED_REGIONS = ("Japan", "North-America", "Europe", "Oceania")
 
-# 高額アイテムランキングから除外するアイテムID
+# ランキングから除外するアイテムID
 EXCLUDED_ITEM_IDS: list[int] = [
-    # 必要に応じてここに追加
+    5859, 39494, 33687, 39493, 33688,
 ]
 
 
@@ -54,7 +54,7 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
                     AND global_min < 300000000
                     AND listing_count > 5
                 ORDER BY global_min DESC
-                LIMIT 10
+                LIMIT 20
             """)
         )
         expensive = [
@@ -112,14 +112,16 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
                     ) dc_prices
                     GROUP BY dc_prices.item_id
                     HAVING COUNT(DISTINCT dc_prices.data_center) >= 2
-                        AND MIN(dc_prices.dc_min) > 0
+                        AND MIN(dc_prices.dc_min) >= 10000
                         AND MAX(dc_prices.dc_min) < 300000000
                         AND MAX(dc_prices.dc_min) > MIN(dc_prices.dc_min)
+                        AND (MAX(dc_prices.dc_min) - MIN(dc_prices.dc_min)) <= 50000000
                 ) a
                 JOIN items i ON a.item_id = i.id
                 WHERE a.item_id NOT IN ({excluded_sql})
+                    AND profit_rate <= 1000
                 ORDER BY profit_rate DESC
-                LIMIT 10
+                LIMIT 20
             """)
         )
         arbitrage = [
