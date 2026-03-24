@@ -70,74 +70,80 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
             for r in expensive_result.all()
         ]
 
-        # 利益率ランキング TOP10
-        logger.info("Calculating arbitrage items...")
-        arb_result = await session.execute(
-            text(f"""
+        # 共通サブクエリ
+        arb_base_sql = f"""
+            SELECT
+                a.item_id,
+                i.name_ja, i.name_en, i.icon_url,
+                a.min_price AS buy_price,
+                a.buy_dc AS buy_info,
+                a.max_price AS sell_price,
+                a.sell_dc AS sell_info,
+                (a.max_price - a.min_price) AS profit,
+                ROUND((a.max_price - a.min_price) / a.min_price * 100, 1) AS profit_rate
+            FROM (
                 SELECT
-                    a.item_id,
-                    i.name_ja, i.name_en, i.icon_url,
-                    a.min_price AS buy_price,
-                    a.buy_dc AS buy_info,
-                    a.max_price AS sell_price,
-                    a.sell_dc AS sell_info,
-                    (a.max_price - a.min_price) AS profit,
-                    ROUND((a.max_price - a.min_price) / a.min_price * 100, 1) AS profit_rate
+                    dc_prices.item_id,
+                    MIN(dc_prices.dc_min) AS min_price,
+                    MAX(dc_prices.dc_min) AS max_price,
+                    SUBSTRING_INDEX(
+                        GROUP_CONCAT(dc_prices.data_center ORDER BY dc_prices.dc_min ASC), ',', 1
+                    ) AS buy_dc,
+                    SUBSTRING_INDEX(
+                        GROUP_CONCAT(dc_prices.data_center ORDER BY dc_prices.dc_min DESC), ',', 1
+                    ) AS sell_dc
                 FROM (
                     SELECT
-                        dc_prices.item_id,
-                        MIN(dc_prices.dc_min) AS min_price,
-                        MAX(dc_prices.dc_min) AS max_price,
-                        SUBSTRING_INDEX(
-                            GROUP_CONCAT(dc_prices.data_center ORDER BY dc_prices.dc_min ASC), ',', 1
-                        ) AS buy_dc,
-                        SUBSTRING_INDEX(
-                            GROUP_CONCAT(dc_prices.data_center ORDER BY dc_prices.dc_min DESC), ',', 1
-                        ) AS sell_dc
-                    FROM (
-                        SELECT
-                            l.item_id,
-                            w.data_center,
-                            MIN(l.price_per_unit) AS dc_min
-                        FROM listings l
-                        JOIN worlds w ON l.world_id = w.id
-                        WHERE w.region IN ({regions_sql})
-                        GROUP BY l.item_id, w.data_center
-                    ) dc_prices
-                    GROUP BY dc_prices.item_id
-                    HAVING COUNT(DISTINCT dc_prices.data_center) >= 2
-                        AND MIN(dc_prices.dc_min) >= 10000
-                        AND MAX(dc_prices.dc_min) < 300000000
-                        AND MAX(dc_prices.dc_min) > MIN(dc_prices.dc_min)
-                        AND (MAX(dc_prices.dc_min) - MIN(dc_prices.dc_min)) <= 50000000
-                ) a
-                JOIN items i ON a.item_id = i.id
-                WHERE a.item_id NOT IN ({excluded_sql})
-                    AND ROUND((a.max_price - a.min_price) / a.min_price * 100, 1) <= 1000
-                ORDER BY profit_rate DESC
-                LIMIT 50
-            """)
-        )
-        all_arb = [
-            {
-                "item_id": r.item_id,
-                "name_ja": r.name_ja,
-                "name_en": r.name_en,
-                "icon_url": r.icon_url,
-                "buy_price": r.buy_price,
-                "buy_info": r.buy_info,
-                "sell_price": r.sell_price,
-                "sell_info": r.sell_info,
-                "profit": r.profit,
-                "profit_rate": float(r.profit_rate),
-            }
-            for r in arb_result.all()
-        ]
+                        l.item_id,
+                        w.data_center,
+                        MIN(l.price_per_unit) AS dc_min
+                    FROM listings l
+                    JOIN worlds w ON l.world_id = w.id
+                    WHERE w.region IN ({regions_sql})
+                    GROUP BY l.item_id, w.data_center
+                ) dc_prices
+                GROUP BY dc_prices.item_id
+                HAVING COUNT(DISTINCT dc_prices.data_center) >= 2
+                    AND MIN(dc_prices.dc_min) >= 10000
+                    AND MAX(dc_prices.dc_min) < 300000000
+                    AND MAX(dc_prices.dc_min) > MIN(dc_prices.dc_min)
+                    AND (MAX(dc_prices.dc_min) - MIN(dc_prices.dc_min)) <= 50000000
+            ) a
+            JOIN items i ON a.item_id = i.id
+            WHERE a.item_id NOT IN ({excluded_sql})
+                AND ROUND((a.max_price - a.min_price) / a.min_price * 100, 1) <= 1000
+        """
+
+        def parse_arb_rows(result):
+            return [
+                {
+                    "item_id": r.item_id,
+                    "name_ja": r.name_ja,
+                    "name_en": r.name_en,
+                    "icon_url": r.icon_url,
+                    "buy_price": r.buy_price,
+                    "buy_info": r.buy_info,
+                    "sell_price": r.sell_price,
+                    "sell_info": r.sell_info,
+                    "profit": r.profit,
+                    "profit_rate": float(r.profit_rate),
+                }
+                for r in result.all()
+            ]
 
         # 利益率順 TOP20
-        arbitrage_rate = sorted(all_arb, key=lambda x: x["profit_rate"], reverse=True)[:20]
+        logger.info("Calculating arbitrage (rate)...")
+        rate_result = await session.execute(
+            text(arb_base_sql + " ORDER BY profit_rate DESC LIMIT 20")
+        )
+        arbitrage_rate = parse_arb_rows(rate_result)
+
         # 差額順 TOP20
-        arbitrage_profit = sorted(all_arb, key=lambda x: x["profit"], reverse=True)[:20]
+        logger.info("Calculating arbitrage (profit)...")
+        profit_result = await session.execute(
+            text(arb_base_sql + " ORDER BY profit DESC LIMIT 20")
+        )
+        arbitrage_profit = parse_arb_rows(profit_result)
 
         now = datetime.now(timezone.utc).replace(tzinfo=None)
 

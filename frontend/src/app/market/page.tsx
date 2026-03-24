@@ -367,11 +367,29 @@ export default function HomePage() {
               </button>
             </div>
           </div>
+          <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border)] px-4 py-2 text-xs">
+            <span className="text-[var(--muted-foreground)]">除外DC:</span>
+            {["Elemental","Gaia","Mana","Meteor","Aether","Crystal","Dynamis","Primal","Chaos","Light","Materia"].map((dc) => (
+              <label key={dc} className="flex cursor-pointer items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={arbExcludeDCs.includes(dc)}
+                  onChange={() => setArbExcludeDCs((prev) =>
+                    prev.includes(dc) ? prev.filter((d) => d !== dc) : [...prev, dc]
+                  )}
+                  className="accent-[var(--destructive)]"
+                />
+                <span className={arbExcludeDCs.includes(dc) ? "text-[var(--muted-foreground)] line-through" : ""}>
+                  {dc}
+                </span>
+              </label>
+            ))}
+          </div>
           {(() => {
             const sourceItems = arbMode === "rate" ? arbitrageItems : arbitrageProfitItems;
             const filtered = sourceItems?.filter((item) => {
-              const buyDC = item.buy_info?.split(":")[0] ?? "";
-              const sellDC = item.sell_info?.split(":")[0] ?? "";
+              const buyDC = item.buy_info ?? "";
+              const sellDC = item.sell_info ?? "";
               return !arbExcludeDCs.includes(buyDC) && !arbExcludeDCs.includes(sellDC);
             });
             return filtered && filtered.length > 0 ? (
