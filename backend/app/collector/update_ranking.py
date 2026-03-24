@@ -38,6 +38,8 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
                     GROUP BY l.item_id, i.name_ja, i.name_en, i.icon_url
                 ) ranked
                 WHERE global_min > 0
+                    AND global_min < 300000000
+                    AND listing_count > 5
                 ORDER BY global_min DESC
                 LIMIT 10
             """)
@@ -97,6 +99,7 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
                     GROUP BY dc_prices.item_id
                     HAVING COUNT(DISTINCT dc_prices.data_center) >= 2
                         AND MIN(dc_prices.dc_min) > 0
+                        AND MAX(dc_prices.dc_min) < 300000000
                         AND MAX(dc_prices.dc_min) > MIN(dc_prices.dc_min)
                 ) a
                 JOIN items i ON a.item_id = i.id
