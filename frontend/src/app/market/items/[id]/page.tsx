@@ -137,6 +137,16 @@ export default function ItemDetailPage({ params }: Props) {
     setInWatchlist(isInWatchlist(itemId));
   }, [itemId]);
 
+  // 公式ツールチップの再初期化
+  useEffect(() => {
+    if (item) {
+      const w = window as unknown as Record<string, unknown>;
+      if (typeof w.eorzeadb_parse_links === "function") {
+        (w.eorzeadb_parse_links as () => void)();
+      }
+    }
+  }, [item]);
+
   const { data: item } = useQuery({
     queryKey: ["item", itemId],
     queryFn: () => getItem(itemId),
@@ -219,7 +229,14 @@ export default function ItemDetailPage({ params }: Props) {
           )}
           <div>
             <h1 className="text-2xl font-bold">
-              {item?.name_ja || item?.name_en || `Item #${itemId}`}
+              <a
+                href={`https://jp.finalfantasyxiv.com/lodestone/playguide/db/item/?patch=&q=${encodeURIComponent(item?.name_en || "")}`}
+                className="eorzeadb_link"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {item?.name_ja || item?.name_en || `Item #${itemId}`}
+              </a>
             </h1>
             <div className="flex gap-3 text-sm text-[var(--muted-foreground)]">
               {item?.name_en && <span>{item.name_en}</span>}

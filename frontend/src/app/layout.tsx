@@ -19,6 +19,10 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body>
+        <script
+          src="https://lds-img.finalfantasyxiv.com/pc/global/js/eorzeadb/loader.js?v3"
+          async
+        />
         <Providers>
           <Header />
           <Breadcrumb />
