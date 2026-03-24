@@ -141,12 +141,22 @@ interface HistoryDCGroup {
 function buildHistoryGroups(
   history: SaleRecord[],
   serverFilter: string
-): { region: string; dcs: HistoryDCGroup[] }[] {
-  const filtered = serverFilter
-    ? history.filter((s) => s.world_name === serverFilter)
-    : history;
+): { region: string; dcs: HistoryDCGroup[]; noData: boolean }[] {
+  // サーバーフィルタがある場合、まず完全一致で絞り込み
+  let filtered = history;
+  let noData = false;
 
-  // region は売買履歴APIにないので DC でグルーピング
+  if (serverFilter) {
+    const exact = history.filter((s) => s.world_name === serverFilter);
+    if (exact.length > 0) {
+      filtered = exact;
+    } else {
+      // 該当サーバーの売買履歴がない → 全件表示（DCが不明なため）
+      filtered = history;
+      noData = true;
+    }
+  }
+
   const dcMap = new Map<string, Map<string, SaleRecord[]>>();
   for (const sale of filtered) {
     let worldMap = dcMap.get(sale.data_center);
@@ -172,6 +182,7 @@ function buildHistoryGroups(
           total: Array.from(worldMap.values()).reduce((s, v) => s + v.length, 0),
         },
       ],
+      noData,
     }));
 }
 
@@ -197,11 +208,12 @@ function HistorySection({
     });
   }
 
-  // サーバー一覧（フィルタ用）
+  // サーバー一覧（フィルタ用 - 売買履歴のサーバー + URLパラメータのサーバー）
   const servers = useMemo(() => {
     const set = new Set(history.map((s) => s.world_name));
+    if (serverFilter) set.add(serverFilter);
     return Array.from(set).sort();
-  }, [history]);
+  }, [history, serverFilter]);
 
   const groups = useMemo(
     () => buildHistoryGroups(history, serverFilter),
@@ -253,6 +265,12 @@ function HistorySection({
           </button>
         )}
       </div>
+
+      {groups.some((g) => g.noData) && serverFilter && (
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] px-4 py-2 text-sm text-[var(--muted-foreground)]">
+          {serverFilter} の売買履歴はありません。同DC内の他サーバーの履歴を表示しています。
+        </div>
+      )}
 
       <div className="grid gap-3 md:grid-cols-2">
         {groups.map(({ dcs }) =>
