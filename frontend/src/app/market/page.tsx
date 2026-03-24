@@ -9,6 +9,7 @@ import {
 } from "@/lib/watchlist-store";
 import { TaxSelect, TAX_OPTIONS } from "@/components/tax-toggle";
 import { formatGil, calcArbitrageProfit } from "@/lib/utils";
+import { getSettings, saveSettings } from "@/lib/settings-store";
 
 const REGIONS = ["Japan", "North-America", "Europe", "Oceania"];
 const REGION_SHORT: Record<string, string> = {
@@ -21,6 +22,29 @@ const REGION_SHORT: Record<string, string> = {
 export default function HomePage() {
   const [itemIds, setItemIds] = useState<number[]>([]);
   const [taxIndex, setTaxIndex] = useState(0);
+  const [arbRegions, setArbRegions] = useState<string[]>(REGIONS);
+
+  useEffect(() => {
+    const s = getSettings();
+    setTaxIndex(s.taxIndex);
+    setArbRegions(s.arbRegions);
+  }, []);
+
+  function handleTaxChange(idx: number) {
+    setTaxIndex(idx);
+    saveSettings({ taxIndex: idx });
+  }
+
+  function toggleArbRegion(region: string) {
+    setArbRegions((prev) => {
+      const next = prev.includes(region)
+        ? prev.filter((r) => r !== region)
+        : [...prev, region];
+      if (next.length < 2) return prev; // 最低2つ必要
+      saveSettings({ arbRegions: next });
+      return next;
+    });
+  }
 
   useEffect(() => {
     setItemIds(getWatchlist());
@@ -45,7 +69,8 @@ export default function HomePage() {
   }
 
   function getArbitrage(item: WatchlistItem) {
-    const regionMins = REGIONS.map((r) => {
+    // 差益計算対象リージョンのみ
+    const regionMins = arbRegions.map((r) => {
       const p = getRegionBestPrice(item, r);
       return p ? { ...p, region: r } : null;
     }).filter(Boolean) as (typeof item.prices_by_dc[0] & { region: string })[];
@@ -68,7 +93,7 @@ export default function HomePage() {
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-bold">ウォッチリスト</h2>
           <div className="flex items-center gap-4">
-            <TaxSelect value={taxIndex} onChange={setTaxIndex} />
+            <TaxSelect value={taxIndex} onChange={handleTaxChange} />
             {itemIds.length > 0 && (
               <span className="text-sm text-[var(--muted-foreground)]">
                 {itemIds.length} アイテム
@@ -76,6 +101,35 @@ export default function HomePage() {
             )}
           </div>
         </div>
+
+        {/* 差益対象リージョン設定 */}
+        {itemIds.length > 0 && (
+          <div className="flex items-center gap-3 text-xs">
+            <span className="text-[var(--muted-foreground)]">差益比較:</span>
+            {REGIONS.map((r) => (
+              <label
+                key={r}
+                className="flex cursor-pointer items-center gap-1"
+              >
+                <input
+                  type="checkbox"
+                  checked={arbRegions.includes(r)}
+                  onChange={() => toggleArbRegion(r)}
+                  className="accent-[var(--primary)]"
+                />
+                <span
+                  className={
+                    arbRegions.includes(r)
+                      ? "text-[var(--foreground)]"
+                      : "text-[var(--muted-foreground)]"
+                  }
+                >
+                  {REGION_SHORT[r]}
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
 
         {itemIds.length === 0 && (
           <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-8 text-center text-[var(--muted-foreground)]">
@@ -97,7 +151,12 @@ export default function HomePage() {
                 <tr className="border-b border-[var(--border)] bg-[var(--card)] text-left text-[var(--muted-foreground)]">
                   <th className="px-3 py-2.5">アイテム</th>
                   {REGIONS.map((r) => (
-                    <th key={r} className="px-3 py-2.5 text-right">
+                    <th
+                      key={r}
+                      className={`px-3 py-2.5 text-right ${
+                        arbRegions.includes(r) ? "" : "opacity-40"
+                      }`}
+                    >
                       {REGION_SHORT[r]}
                     </th>
                   ))}
@@ -126,14 +185,17 @@ export default function HomePage() {
                       </td>
                       {REGIONS.map((region) => {
                         const price = getRegionBestPrice(item, region);
+                        const inArb = arbRegions.includes(region);
                         const isLowest =
-                          arb && price && price.min_price === arb.cheapest.min_price;
+                          inArb && arb && price && price.min_price === arb.cheapest.min_price;
                         const isHighest =
-                          arb && price && price.min_price === arb.expensive.min_price;
+                          inArb && arb && price && price.min_price === arb.expensive.min_price;
                         return (
                           <td
                             key={region}
-                            className="px-3 py-2.5 text-right font-mono text-sm"
+                            className={`px-3 py-2.5 text-right font-mono text-sm ${
+                              inArb ? "" : "opacity-40"
+                            }`}
                           >
                             {price ? (
                               <a

@@ -19,6 +19,7 @@ import {
   removeFromWatchlist,
 } from "@/lib/watchlist-store";
 import { formatGil, timeAgo } from "@/lib/utils";
+import { getSettings, saveSettings } from "@/lib/settings-store";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -394,6 +395,24 @@ export default function ItemDetailPage({ params }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [historyServer, setHistoryServer] = useState(initialServer);
   const [listingSort, setListingSort] = useState<ListingSort>("price-asc");
+
+  // 設定から初期値を読み込み
+  useEffect(() => {
+    const s = getSettings();
+    setListingSort(s.listingSort as ListingSort);
+    if (s.hqFilter === "true") setHqFilter(true);
+    else if (s.hqFilter === "false") setHqFilter(false);
+  }, []);
+
+  function handleSortChange(sort: ListingSort) {
+    setListingSort(sort);
+    saveSettings({ listingSort: sort });
+  }
+
+  function handleHqChange(val: boolean | undefined) {
+    setHqFilter(val);
+    saveSettings({ hqFilter: val === undefined ? "all" : String(val) });
+  }
   const [expandedWorlds, setExpandedWorlds] = useState<Set<string>>(new Set());
   const [inWatchlist, setInWatchlist] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -594,7 +613,7 @@ export default function ItemDetailPage({ params }: Props) {
               ].map((opt) => (
                 <button
                   key={String(opt.value)}
-                  onClick={() => setHqFilter(opt.value)}
+                  onClick={() => handleHqChange(opt.value)}
                   className={`rounded px-2.5 py-1 text-xs font-medium ${
                     hqFilter === opt.value
                       ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
@@ -607,7 +626,7 @@ export default function ItemDetailPage({ params }: Props) {
             </div>
             <select
               value={listingSort}
-              onChange={(e) => setListingSort(e.target.value as ListingSort)}
+              onChange={(e) => handleSortChange(e.target.value as ListingSort)}
               className="rounded border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-xs text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none"
             >
               <option value="price-asc">安い順</option>
