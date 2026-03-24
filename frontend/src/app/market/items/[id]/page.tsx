@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   getItem,
   getItemPrices,
@@ -9,6 +10,7 @@ import {
   getItemPriceHistory,
   refreshItem,
   type PriceByWorld,
+  type SaleRecord,
 } from "@/lib/api";
 import { PriceChart } from "@/components/price-chart";
 import {
@@ -123,11 +125,243 @@ function buildRegionGroups(prices: PriceByWorld[]): RegionGroup[] {
     });
 }
 
+const REGION_DC_ORDER: Record<string, string[]> = {};
+
+interface HistoryWorldGroup {
+  world_name: string;
+  sales: SaleRecord[];
+}
+
+interface HistoryDCGroup {
+  data_center: string;
+  worlds: HistoryWorldGroup[];
+  total: number;
+}
+
+function buildHistoryGroups(
+  history: SaleRecord[],
+  serverFilter: string
+): { region: string; dcs: HistoryDCGroup[] }[] {
+  const filtered = serverFilter
+    ? history.filter((s) => s.world_name === serverFilter)
+    : history;
+
+  // region は売買履歴APIにないので DC でグルーピング
+  const dcMap = new Map<string, Map<string, SaleRecord[]>>();
+  for (const sale of filtered) {
+    let worldMap = dcMap.get(sale.data_center);
+    if (!worldMap) {
+      worldMap = new Map();
+      dcMap.set(sale.data_center, worldMap);
+    }
+    const list = worldMap.get(sale.world_name) ?? [];
+    list.push(sale);
+    worldMap.set(sale.world_name, list);
+  }
+
+  return Array.from(dcMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([dc, worldMap]) => ({
+      region: dc,
+      dcs: [
+        {
+          data_center: dc,
+          worlds: Array.from(worldMap.entries())
+            .map(([name, sales]) => ({ world_name: name, sales }))
+            .sort((a, b) => a.world_name.localeCompare(b.world_name)),
+          total: Array.from(worldMap.values()).reduce((s, v) => s + v.length, 0),
+        },
+      ],
+    }));
+}
+
+function HistorySection({
+  history,
+  isLoading,
+  serverFilter,
+  onServerFilterChange,
+}: {
+  history: SaleRecord[];
+  isLoading: boolean;
+  serverFilter: string;
+  onServerFilterChange: (s: string) => void;
+}) {
+  const [expandedWorlds, setExpandedWorlds] = useState<Set<string>>(new Set());
+
+  function toggleWorld(key: string) {
+    setExpandedWorlds((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  // サーバー一覧（フィルタ用）
+  const servers = useMemo(() => {
+    const set = new Set(history.map((s) => s.world_name));
+    return Array.from(set).sort();
+  }, [history]);
+
+  const groups = useMemo(
+    () => buildHistoryGroups(history, serverFilter),
+    [history, serverFilter]
+  );
+
+  if (isLoading) {
+    return (
+      <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-8 text-center">
+        <p className="text-[var(--foreground)]">売買履歴を取得中...</p>
+        <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+          初回は少し時間がかかります。
+        </p>
+      </div>
+    );
+  }
+
+  if (history.length === 0) {
+    return (
+      <p className="py-8 text-center text-[var(--muted-foreground)]">
+        売買履歴がありません
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* サーバーフィルタ */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-[var(--muted-foreground)]">サーバー:</span>
+        <select
+          value={serverFilter}
+          onChange={(e) => onServerFilterChange(e.target.value)}
+          className="rounded border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-xs text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none"
+        >
+          <option value="">すべて</option>
+          {servers.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        {serverFilter && (
+          <button
+            onClick={() => onServerFilterChange("")}
+            className="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+          >
+            クリア
+          </button>
+        )}
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        {groups.map(({ dcs }) =>
+          dcs.map((dc) => (
+            <div
+              key={dc.data_center}
+              className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)]"
+            >
+              <div className="flex items-center justify-between border-b border-[var(--border)] px-3 py-2">
+                <span className="font-bold text-[var(--primary)]">
+                  {dc.data_center}
+                </span>
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {dc.total}件
+                </span>
+              </div>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-[var(--muted-foreground)]">
+                    <th className="px-3 py-1.5 text-left font-normal">Server</th>
+                    <th className="px-3 py-1.5 text-right font-normal">直近取引</th>
+                    <th className="px-3 py-1.5 text-right font-normal">件数</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dc.worlds.map((world) => {
+                    const key = `h:${dc.data_center}:${world.world_name}`;
+                    const isExpanded = expandedWorlds.has(key);
+                    const latest = world.sales[0];
+                    return (
+                      <>
+                        <tr
+                          key={world.world_name}
+                          className="border-t border-[var(--border)] cursor-pointer hover:bg-[var(--muted)] transition-colors"
+                          onClick={() => toggleWorld(key)}
+                        >
+                          <td className="px-3 py-1.5">
+                            <span className="mr-1 text-[var(--muted-foreground)]">
+                              {isExpanded ? "▼" : "▶"}
+                            </span>
+                            {world.world_name}
+                          </td>
+                          <td className="px-3 py-1.5 text-right font-mono">
+                            {latest && formatGil(latest.price_per_unit)}
+                          </td>
+                          <td className="px-3 py-1.5 text-right font-mono text-[var(--muted-foreground)]">
+                            {world.sales.length}
+                          </td>
+                        </tr>
+                        {isExpanded &&
+                          world.sales.slice(0, 15).map((sale, i) => (
+                            <tr
+                              key={`${world.world_name}-${i}`}
+                              className="border-t border-[var(--border)] bg-[var(--muted)]"
+                            >
+                              <td className="px-3 py-1 pl-8 text-right text-[var(--muted-foreground)]">
+                                {new Date(sale.sold_at).toLocaleString("ja-JP", {
+                                  month: "numeric",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </td>
+                              <td className="px-3 py-1 text-right font-mono">
+                                {formatGil(sale.price_per_unit)}
+                              </td>
+                              <td className="px-3 py-1 text-right font-mono">
+                                ×{sale.quantity}
+                                {sale.hq && (
+                                  <span className="ml-1 text-yellow-400">★</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        {isExpanded && world.sales.length > 15 && (
+                          <tr
+                            key={`${world.world_name}-more`}
+                            className="border-t border-[var(--border)] bg-[var(--muted)]"
+                          >
+                            <td
+                              colSpan={3}
+                              className="px-3 py-1 text-center text-[var(--muted-foreground)]"
+                            >
+                              他 {world.sales.length - 15} 件
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ItemDetailPage({ params }: Props) {
   const { id } = use(params);
   const itemId = Number(id);
+  const searchParams = useSearchParams();
+  const initialTab = (searchParams.get("tab") as Tab) || "listings";
+  const initialServer = searchParams.get("server") || "";
   const [hqFilter, setHqFilter] = useState<boolean | undefined>(undefined);
-  const [activeTab, setActiveTab] = useState<Tab>("listings");
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+  const [historyServer, setHistoryServer] = useState(initialServer);
   const [expandedWorlds, setExpandedWorlds] = useState<Set<string>>(new Set());
   const [inWatchlist, setInWatchlist] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -535,93 +769,12 @@ export default function ItemDetailPage({ params }: Props) {
 
       {/* 売買履歴 */}
       {activeTab === "history" && (
-        <>
-          {historyLoading && (
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-8 text-center">
-              <p className="text-[var(--foreground)]">売買履歴を取得中...</p>
-              <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-                初回は少し時間がかかります。
-              </p>
-            </div>
-          )}
-          {!historyLoading && history && history.length > 0 ? (() => {
-            // DC別にグルーピング
-            const dcMap = new Map<string, typeof history>();
-            for (const sale of history) {
-              const list = dcMap.get(sale.data_center) ?? [];
-              list.push(sale);
-              dcMap.set(sale.data_center, list);
-            }
-            const dcGroups = Array.from(dcMap.entries()).sort(
-              ([a], [b]) => a.localeCompare(b)
-            );
-
-            return (
-              <div className="grid gap-3 md:grid-cols-2">
-                {dcGroups.map(([dc, sales]) => (
-                  <div
-                    key={dc}
-                    className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)]"
-                  >
-                    <div className="flex items-center justify-between border-b border-[var(--border)] px-3 py-2">
-                      <span className="font-bold text-[var(--primary)]">{dc}</span>
-                      <span className="text-xs text-[var(--muted-foreground)]">
-                        {sales.length}件
-                      </span>
-                    </div>
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="text-[var(--muted-foreground)]">
-                          <th className="px-3 py-1.5 text-left font-normal">Server</th>
-                          <th className="px-3 py-1.5 text-right font-normal">単価</th>
-                          <th className="px-3 py-1.5 text-right font-normal">数量</th>
-                          <th className="px-3 py-1.5 text-center font-normal">HQ</th>
-                          <th className="px-3 py-1.5 text-right font-normal">日時</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sales.slice(0, 15).map((sale, i) => (
-                          <tr
-                            key={i}
-                            className="border-t border-[var(--border)] hover:bg-[var(--muted)] transition-colors"
-                          >
-                            <td className="px-3 py-1">{sale.world_name}</td>
-                            <td className="px-3 py-1 text-right font-mono">
-                              {formatGil(sale.price_per_unit)}
-                            </td>
-                            <td className="px-3 py-1 text-right font-mono">
-                              {sale.quantity}
-                            </td>
-                            <td className="px-3 py-1 text-center">
-                              {sale.hq && <span className="text-yellow-400">★</span>}
-                            </td>
-                            <td className="px-3 py-1 text-right text-[var(--muted-foreground)]">
-                              {new Date(sale.sold_at).toLocaleString("ja-JP", {
-                                month: "numeric",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {sales.length > 15 && (
-                      <div className="border-t border-[var(--border)] px-3 py-1.5 text-center text-xs text-[var(--muted-foreground)]">
-                        他 {sales.length - 15} 件
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            );
-          })() : !historyLoading ? (
-            <p className="py-8 text-center text-[var(--muted-foreground)]">
-              売買履歴がありません
-            </p>
-          ) : null}
-        </>
+        <HistorySection
+          history={history ?? []}
+          isLoading={historyLoading}
+          serverFilter={historyServer}
+          onServerFilterChange={setHistoryServer}
+        />
       )}
 
       {/* 価格推移グラフ */}

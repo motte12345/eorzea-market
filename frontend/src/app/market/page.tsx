@@ -136,7 +136,10 @@ export default function HomePage() {
                             className="px-3 py-2.5 text-right font-mono text-sm"
                           >
                             {price ? (
-                              <div>
+                              <a
+                                href={`/market/items/${item.item_id}?tab=history&server=${encodeURIComponent(price.world_name)}`}
+                                className="block hover:opacity-80"
+                              >
                                 <span
                                   className={
                                     isLowest
@@ -151,7 +154,7 @@ export default function HomePage() {
                                 <div className="text-[10px] text-[var(--muted-foreground)]">
                                   {price.world_name}
                                 </div>
-                              </div>
+                              </a>
                             ) : (
                               <span className="text-[var(--muted-foreground)]">-</span>
                             )}
