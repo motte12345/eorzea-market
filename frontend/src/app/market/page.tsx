@@ -285,11 +285,20 @@ export default function HomePage() {
       </section>
 
       {/* ランキング */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">ランキング</h2>
+        <a
+          href="/market/excluded"
+          className="text-xs text-[var(--muted-foreground)] hover:text-[var(--primary)]"
+        >
+          除外アイテム一覧
+        </a>
+      </div>
       <section className="grid gap-6 md:grid-cols-2">
         {/* 高額アイテム */}
         <div className="rounded-lg border border-[var(--border)] bg-[var(--card)]">
           <div className="border-b border-[var(--border)] px-4 py-3">
-            <h3 className="font-bold">高額アイテム TOP5</h3>
+            <h3 className="font-bold">高額アイテム</h3>
           </div>
           {expensiveItems && expensiveItems.length > 0 ? (
             <>

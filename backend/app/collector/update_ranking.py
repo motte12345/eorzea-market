@@ -22,6 +22,7 @@ INCLUDED_REGIONS = ("Japan", "North-America", "Europe", "Oceania")
 EXCLUDED_ITEM_IDS: list[int] = [
     5859, 39494, 33687, 39493, 33688,
     5852, 5867, 2821,
+    3167, 5410, 5833, 5592, 3865, 9741, 8825, 5591, 8824, 5853,
 ]
 
 
@@ -49,6 +50,7 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
                     JOIN worlds w ON l.world_id = w.id
                     WHERE w.region IN ({regions_sql})
                         AND l.item_id NOT IN ({excluded_sql})
+                        AND i.name_ja NOT LIKE '%SP%'
                     GROUP BY l.item_id, i.name_ja, i.name_en, i.icon_url
                 ) ranked
                 WHERE global_min > 0
@@ -104,6 +106,7 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
             ) na ON jp.item_id = na.item_id
             JOIN items i ON jp.item_id = i.id
             WHERE jp.item_id NOT IN ({excluded_sql})
+                AND i.name_ja NOT LIKE '%SP%'
                 AND LEAST(jp.jp_min, na.na_min) >= 10000
                 AND GREATEST(jp.jp_min, na.na_min) < 300000000
                 AND ABS(jp.jp_min - na.na_min) > 0
