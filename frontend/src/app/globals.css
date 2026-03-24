@@ -20,3 +20,8 @@ body {
   color: var(--foreground);
   font-family: system-ui, -apple-system, sans-serif;
 }
+
+#eorzeadb_tooltip {
+  overflow: visible !important;
+  z-index: 99999 !important;
+}
