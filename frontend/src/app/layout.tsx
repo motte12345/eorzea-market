@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
+import { Breadcrumb } from "@/components/breadcrumb";
 import { Header } from "@/components/header";
 
 export const metadata: Metadata = {
@@ -19,6 +20,7 @@ export default function RootLayout({
       <body>
         <Providers>
           <Header />
+          <Breadcrumb />
           <main className="mx-auto max-w-7xl px-6 py-6">{children}</main>
         </Providers>
       </body>
