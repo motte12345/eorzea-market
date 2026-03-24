@@ -129,11 +129,7 @@ function buildRegionGroups(prices: PriceByWorld[]): RegionGroup[] {
             total_listings: worlds.reduce((s, w) => s + w.listing_count, 0),
           };
         })
-        .sort((a, b) => {
-          const aMin = a.worlds[0]?.min_price ?? Infinity;
-          const bMin = b.worlds[0]?.min_price ?? Infinity;
-          return aMin - bMin;
-        });
+        .sort((a, b) => a.data_center.localeCompare(b.data_center));
 
       return { region, dcs, min_price: regionMin, min_world: regionMinWorld };
     });
