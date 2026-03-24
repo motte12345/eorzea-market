@@ -84,8 +84,7 @@ export default function HomePage() {
 
   const [expExpanded, setExpExpanded] = useState(false);
   const [arbExpanded, setArbExpanded] = useState(false);
-  const [arbMode, setArbMode] = useState<"rate" | "profit">("rate");
-  const [arbExcludeDCs, setArbExcludeDCs] = useState<string[]>([]);
+  const [arbMode, setArbMode] = useState<"rate" | "profit">("profit");
 
   function handleRemove(itemId: number) {
     const updated = removeItem(itemId);
@@ -343,7 +342,7 @@ export default function HomePage() {
         {/* 転売ランキング */}
         <div className="rounded-lg border border-[var(--border)] bg-[var(--card)]">
           <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
-            <h3 className="font-bold">転売ランキング</h3>
+            <h3 className="font-bold">JP ↔ NA 転売ランキング</h3>
             <div className="flex rounded-md border border-[var(--border)]">
               <button
                 onClick={() => { setArbMode("rate"); setArbExpanded(false); }}
@@ -367,31 +366,8 @@ export default function HomePage() {
               </button>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border)] px-4 py-2 text-xs">
-            <span className="text-[var(--muted-foreground)]">除外DC:</span>
-            {["Elemental","Gaia","Mana","Meteor","Aether","Crystal","Dynamis","Primal","Chaos","Light","Materia"].map((dc) => (
-              <label key={dc} className="flex cursor-pointer items-center gap-1">
-                <input
-                  type="checkbox"
-                  checked={arbExcludeDCs.includes(dc)}
-                  onChange={() => setArbExcludeDCs((prev) =>
-                    prev.includes(dc) ? prev.filter((d) => d !== dc) : [...prev, dc]
-                  )}
-                  className="accent-[var(--destructive)]"
-                />
-                <span className={arbExcludeDCs.includes(dc) ? "text-[var(--muted-foreground)] line-through" : ""}>
-                  {dc}
-                </span>
-              </label>
-            ))}
-          </div>
           {(() => {
-            const sourceItems = arbMode === "rate" ? arbitrageItems : arbitrageProfitItems;
-            const filtered = sourceItems?.filter((item) => {
-              const buyDC = item.buy_info ?? "";
-              const sellDC = item.sell_info ?? "";
-              return !arbExcludeDCs.includes(buyDC) && !arbExcludeDCs.includes(sellDC);
-            });
+            const filtered = arbMode === "rate" ? arbitrageItems : arbitrageProfitItems;
             return filtered && filtered.length > 0 ? (
               <>
                 <table className="w-full text-sm">

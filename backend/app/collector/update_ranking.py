@@ -70,48 +70,45 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
             for r in expensive_result.all()
         ]
 
-        # 共通サブクエリ
+        # Japan vs NA 転売ランキング
+        # 各アイテムについて JP最安 vs NA最安 を比較
         arb_base_sql = f"""
             SELECT
-                a.item_id,
+                jp.item_id,
                 i.name_ja, i.name_en, i.icon_url,
-                a.min_price AS buy_price,
-                a.buy_dc AS buy_info,
-                a.max_price AS sell_price,
-                a.sell_dc AS sell_info,
-                (a.max_price - a.min_price) AS profit,
-                ROUND((a.max_price - a.min_price) / a.min_price * 100, 1) AS profit_rate
+                jp.jp_min, jp.jp_dc,
+                na.na_min, na.na_dc,
+                LEAST(jp.jp_min, na.na_min) AS buy_price,
+                CASE WHEN jp.jp_min < na.na_min THEN jp.jp_dc ELSE na.na_dc END AS buy_info,
+                GREATEST(jp.jp_min, na.na_min) AS sell_price,
+                CASE WHEN jp.jp_min < na.na_min THEN na.na_dc ELSE jp.jp_dc END AS sell_info,
+                ABS(jp.jp_min - na.na_min) AS profit,
+                ROUND(ABS(jp.jp_min - na.na_min) / LEAST(jp.jp_min, na.na_min) * 100, 1) AS profit_rate
             FROM (
-                SELECT
-                    dc_prices.item_id,
-                    MIN(dc_prices.dc_min) AS min_price,
-                    MAX(dc_prices.dc_min) AS max_price,
-                    SUBSTRING_INDEX(
-                        GROUP_CONCAT(dc_prices.data_center ORDER BY dc_prices.dc_min ASC), ',', 1
-                    ) AS buy_dc,
-                    SUBSTRING_INDEX(
-                        GROUP_CONCAT(dc_prices.data_center ORDER BY dc_prices.dc_min DESC), ',', 1
-                    ) AS sell_dc
-                FROM (
-                    SELECT
-                        l.item_id,
-                        w.data_center,
-                        MIN(l.price_per_unit) AS dc_min
-                    FROM listings l
-                    JOIN worlds w ON l.world_id = w.id
-                    WHERE w.region IN ({regions_sql})
-                    GROUP BY l.item_id, w.data_center
-                ) dc_prices
-                GROUP BY dc_prices.item_id
-                HAVING COUNT(DISTINCT dc_prices.data_center) >= 2
-                    AND MIN(dc_prices.dc_min) >= 10000
-                    AND MAX(dc_prices.dc_min) < 300000000
-                    AND MAX(dc_prices.dc_min) > MIN(dc_prices.dc_min)
-                    AND (MAX(dc_prices.dc_min) - MIN(dc_prices.dc_min)) <= 50000000
-            ) a
-            JOIN items i ON a.item_id = i.id
-            WHERE a.item_id NOT IN ({excluded_sql})
-                AND ROUND((a.max_price - a.min_price) / a.min_price * 100, 1) <= 1000
+                SELECT l.item_id,
+                    MIN(l.price_per_unit) AS jp_min,
+                    SUBSTRING_INDEX(GROUP_CONCAT(w.data_center ORDER BY l.price_per_unit ASC), ',', 1) AS jp_dc
+                FROM listings l
+                JOIN worlds w ON l.world_id = w.id
+                WHERE w.region = 'Japan'
+                GROUP BY l.item_id
+            ) jp
+            JOIN (
+                SELECT l.item_id,
+                    MIN(l.price_per_unit) AS na_min,
+                    SUBSTRING_INDEX(GROUP_CONCAT(w.data_center ORDER BY l.price_per_unit ASC), ',', 1) AS na_dc
+                FROM listings l
+                JOIN worlds w ON l.world_id = w.id
+                WHERE w.region = 'North-America'
+                GROUP BY l.item_id
+            ) na ON jp.item_id = na.item_id
+            JOIN items i ON jp.item_id = i.id
+            WHERE jp.item_id NOT IN ({excluded_sql})
+                AND LEAST(jp.jp_min, na.na_min) >= 10000
+                AND GREATEST(jp.jp_min, na.na_min) < 300000000
+                AND ABS(jp.jp_min - na.na_min) > 0
+                AND ABS(jp.jp_min - na.na_min) <= 50000000
+                AND ROUND(ABS(jp.jp_min - na.na_min) / LEAST(jp.jp_min, na.na_min) * 100, 1) <= 1000
         """
 
         def parse_arb_rows(result):
