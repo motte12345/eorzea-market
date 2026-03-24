@@ -14,7 +14,7 @@ const tools: Tool[] = [
     description:
       "全サーバーのマーケットボード価格をリアルタイム比較。DC間の転売差益を一目で確認。",
     href: "/market",
-    icon: "/icon.png",
+    icon: "/market-icon.png",
     status: "active",
   },
 ];
@@ -23,8 +23,9 @@ export default function PortalPage() {
   return (
     <div className="flex flex-col items-center gap-12 pt-12">
       <div className="text-center">
+        <img src="/icon.png" alt="" className="mx-auto mb-4 h-16 w-16" />
         <h1 className="text-4xl font-bold text-[var(--primary)]">
-          Eorzea Tools
+          QP Tools
         </h1>
         <p className="mt-3 text-[var(--muted-foreground)]">
           FFXIV プレイヤー向けツール集

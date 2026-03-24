@@ -3,8 +3,9 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Eorzea Tools",
+  title: "QP Tools",
   description: "FFXIV プレイヤー向けツール集",
+  icons: { icon: "/icon.png" },
 };
 
 export default function RootLayout({
@@ -21,7 +22,7 @@ export default function RootLayout({
               <a href="/" className="flex items-center gap-2">
                 <img src="/icon.png" alt="" className="h-8 w-8" />
                 <span className="text-xl font-bold text-[var(--primary)]">
-                  Eorzea Tools
+                  QP Tools
                 </span>
               </a>
               <nav className="flex gap-4 text-sm">
