@@ -30,7 +30,9 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
                     COUNT(l.id) AS listing_count
                 FROM listings l
                 JOIN items i ON l.item_id = i.id
+                WHERE l.price_per_unit < 999999999
                 GROUP BY l.item_id, i.name_ja, i.name_en, i.icon_url
+                HAVING MIN(l.price_per_unit) > 0
                 ORDER BY MIN(l.price_per_unit) DESC
                 LIMIT 10
             """)
@@ -85,6 +87,7 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
                             MIN(l.price_per_unit) AS dc_min
                         FROM listings l
                         JOIN worlds w ON l.world_id = w.id
+                        WHERE l.price_per_unit < 999999999
                         GROUP BY l.item_id, w.data_center, w.name
                     ) dc_prices
                     GROUP BY dc_prices.item_id
