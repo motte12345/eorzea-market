@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { formatGil } from "@/lib/utils";
 
 interface SearchResponse {
@@ -20,6 +20,14 @@ interface SearchResponse {
 }
 
 export default function SearchPage() {
+  return (
+    <Suspense fallback={<p className="text-[var(--muted-foreground)]">読み込み中...</p>}>
+      <SearchContent />
+    </Suspense>
+  );
+}
+
+function SearchContent() {
   const searchParams = useSearchParams();
   const initialQ = searchParams.get("q") || "";
   const [query, setQuery] = useState(initialQ);
