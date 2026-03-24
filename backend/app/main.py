@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.api.items import router as items_router
+from app.api.ranking import router as ranking_router
 from app.api.refresh import router as refresh_router
 from app.api.watchlist import router as watchlist_router
 from app.collector.scheduler import create_scheduler
@@ -41,6 +42,7 @@ app.add_middleware(
 )
 
 app.include_router(items_router, prefix="/api/items", tags=["items"])
+app.include_router(ranking_router, prefix="/api/ranking", tags=["ranking"])
 app.include_router(refresh_router, prefix="/api/refresh", tags=["refresh"])
 app.include_router(watchlist_router, prefix="/api/watchlist", tags=["watchlist"])
 

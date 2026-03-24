@@ -2,7 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { getWatchlistPrices, type WatchlistItem } from "@/lib/api";
+import {
+  getWatchlistPrices,
+  getExpensiveItems,
+  getArbitrageItems,
+  type WatchlistItem,
+  type RankingItem,
+} from "@/lib/api";
 import {
   getWatchlist,
   removeFromWatchlist as removeItem,
@@ -55,6 +61,18 @@ export default function HomePage() {
     queryFn: () => getWatchlistPrices(itemIds),
     enabled: itemIds.length > 0,
     refetchInterval: 60 * 1000,
+  });
+
+  const { data: expensiveItems } = useQuery({
+    queryKey: ["ranking-expensive"],
+    queryFn: () => getExpensiveItems(5),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const { data: arbitrageItems } = useQuery({
+    queryKey: ["ranking-arbitrage"],
+    queryFn: () => getArbitrageItems(5),
+    staleTime: 10 * 60 * 1000,
   });
 
   function handleRemove(itemId: number) {
@@ -253,6 +271,111 @@ export default function HomePage() {
             </table>
           </div>
         )}
+      </section>
+
+      {/* ランキング */}
+      <section className="grid gap-6 md:grid-cols-2">
+        {/* 高額アイテム */}
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--card)]">
+          <div className="border-b border-[var(--border)] px-4 py-3">
+            <h3 className="font-bold">高額アイテム TOP5</h3>
+          </div>
+          {expensiveItems && expensiveItems.length > 0 ? (
+            <table className="w-full text-sm">
+              <tbody>
+                {expensiveItems.map((item, i) => (
+                  <tr
+                    key={item.item_id}
+                    className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)] transition-colors"
+                  >
+                    <td className="px-4 py-2 w-8 text-center text-[var(--muted-foreground)]">
+                      {i + 1}
+                    </td>
+                    <td className="py-2">
+                      <a
+                        href={`/market/items/${item.item_id}`}
+                        className="flex items-center gap-2 hover:text-[var(--primary)]"
+                      >
+                        {item.icon_url && (
+                          <img src={item.icon_url} alt="" className="h-6 w-6" />
+                        )}
+                        <span className="truncate">
+                          {item.name_ja || item.name_en}
+                        </span>
+                      </a>
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono text-[var(--primary)]">
+                      {formatGil(item.min_price ?? 0)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="px-4 py-6 text-center text-sm text-[var(--muted-foreground)]">
+              データ取得中...
+            </p>
+          )}
+        </div>
+
+        {/* 利益率ランキング */}
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--card)]">
+          <div className="border-b border-[var(--border)] px-4 py-3">
+            <h3 className="font-bold">利益率ランキング TOP5</h3>
+          </div>
+          {arbitrageItems && arbitrageItems.length > 0 ? (
+            <table className="w-full text-sm">
+              <tbody>
+                {arbitrageItems.map((item, i) => {
+                  const buyDC = item.buy_info?.split(":")[0] ?? "";
+                  const buyWorld = item.buy_info?.split(":")[1] ?? "";
+                  const sellDC = item.sell_info?.split(":")[0] ?? "";
+                  const sellWorld = item.sell_info?.split(":")[1] ?? "";
+                  return (
+                    <tr
+                      key={item.item_id}
+                      className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)] transition-colors"
+                    >
+                      <td className="px-4 py-2 w-8 text-center text-[var(--muted-foreground)]">
+                        {i + 1}
+                      </td>
+                      <td className="py-2">
+                        <a
+                          href={`/market/items/${item.item_id}`}
+                          className="flex items-center gap-2 hover:text-[var(--primary)]"
+                        >
+                          {item.icon_url && (
+                            <img src={item.icon_url} alt="" className="h-6 w-6" />
+                          )}
+                          <div className="min-w-0">
+                            <div className="truncate">
+                              {item.name_ja || item.name_en}
+                            </div>
+                            <div className="text-[10px] text-[var(--muted-foreground)]">
+                              {buyDC} {buyWorld} → {sellDC} {sellWorld}
+                            </div>
+                          </div>
+                        </a>
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        <div className="font-mono text-[var(--positive)]">
+                          +{formatGil(item.profit ?? 0)}
+                        </div>
+                        <div className="text-[10px] text-[var(--muted-foreground)]">
+                          {item.profit_rate}%
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <p className="px-4 py-6 text-center text-sm text-[var(--muted-foreground)]">
+              データ取得中...
+            </p>
+          )}
+        </div>
       </section>
     </div>
   );

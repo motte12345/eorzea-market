@@ -118,6 +118,29 @@ export async function getItemPriceHistory(
   return fetchJson(`/items/${itemId}/price-history?days=${days}`);
 }
 
+export interface RankingItem {
+  item_id: number;
+  name_ja: string;
+  name_en: string;
+  icon_url: string;
+  min_price?: number;
+  listing_count?: number;
+  buy_price?: number;
+  buy_info?: string;
+  sell_price?: number;
+  sell_info?: string;
+  profit?: number;
+  profit_rate?: number;
+}
+
+export async function getExpensiveItems(limit = 5): Promise<RankingItem[]> {
+  return fetchJson(`/ranking/expensive?limit=${limit}`);
+}
+
+export async function getArbitrageItems(limit = 5): Promise<RankingItem[]> {
+  return fetchJson(`/ranking/arbitrage?limit=${limit}`);
+}
+
 export async function refreshItem(itemId: number): Promise<void> {
   await fetchJson(`/refresh/${itemId}`, { method: "POST" });
 }
