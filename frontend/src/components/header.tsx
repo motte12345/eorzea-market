@@ -1,11 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ItemSearch } from "@/components/item-search";
 import type { ItemSearchResult } from "@/lib/api";
 
 export function Header() {
   const router = useRouter();
+  const pathname = usePathname();
+  const showSearch = pathname.startsWith("/market");
 
   function handleSelect(item: ItemSearchResult) {
     router.push(`/market/items/${item.id}`);
@@ -21,12 +23,15 @@ export function Header() {
           </span>
         </a>
 
-        <div className="flex-1">
-          <ItemSearch
-            onSelect={handleSelect}
-            placeholder="アイテム検索..."
-          />
-        </div>
+        {showSearch && (
+          <div className="flex-1">
+            <ItemSearch
+              onSelect={handleSelect}
+              placeholder="アイテム検索..."
+            />
+          </div>
+        )}
+        {!showSearch && <div className="flex-1" />}
 
         <nav className="flex flex-shrink-0 gap-4 text-sm">
           <a href="/" className="hover:text-[var(--primary)]">
