@@ -155,10 +155,14 @@ export default function ItemDetailPage({ params }: Props) {
 
   // 公式ツールチップの再初期化
   useEffect(() => {
-    if (item) {
+    if (item?.lodestone_id) {
       const w = window as unknown as Record<string, unknown>;
-      if (typeof w.eorzeadb_parse_links === "function") {
-        (w.eorzeadb_parse_links as () => void)();
+      const edb = w.eorzeadb as Record<string, unknown> | undefined;
+      if (edb && typeof edb.init === "function") {
+        const jq = w.jQuery as (() => void) | undefined;
+        if (jq) {
+          (edb.init as (jq: unknown) => void)(jq);
+        }
       }
     }
   }, [item]);
