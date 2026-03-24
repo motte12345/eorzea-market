@@ -530,10 +530,10 @@ export default function ItemDetailPage({ params }: Props) {
 
   const regionGroups = prices ? buildRegionGroups(prices) : [];
   const totalListings = prices?.length ?? 0;
-  const globalMin =
-    prices && prices.length > 0
-      ? Math.min(...prices.map((p) => p.price_per_unit))
-      : null;
+  // regionGroups から全DC最安を計算（ワールドごとの最安値ベース）
+  const globalMin = regionGroups.length > 0
+    ? Math.min(...regionGroups.map((rg) => rg.min_price))
+    : null;
 
   return (
     <div className="space-y-6">
