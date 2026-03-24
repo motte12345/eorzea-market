@@ -1,13 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ItemSearch } from "@/components/item-search";
-import { getWatchlistPrices, type WatchlistItem, type ItemSearchResult } from "@/lib/api";
+import { getWatchlistPrices, type WatchlistItem } from "@/lib/api";
 import {
   getWatchlist,
-  addToWatchlist,
   removeFromWatchlist as removeItem,
 } from "@/lib/watchlist-store";
 import { TaxSelect, TAX_OPTIONS } from "@/components/tax-toggle";
@@ -22,7 +19,6 @@ const REGION_SHORT: Record<string, string> = {
 };
 
 export default function HomePage() {
-  const router = useRouter();
   const [itemIds, setItemIds] = useState<number[]>([]);
   const [taxIndex, setTaxIndex] = useState(0);
 
@@ -36,15 +32,6 @@ export default function HomePage() {
     enabled: itemIds.length > 0,
     refetchInterval: 60 * 1000,
   });
-
-  function handleSearchSelect(item: ItemSearchResult) {
-    router.push(`/market/items/${item.id}`);
-  }
-
-  function handleAddToWatchlist(item: ItemSearchResult) {
-    const updated = addToWatchlist(item.id);
-    setItemIds(updated);
-  }
 
   function handleRemove(itemId: number) {
     const updated = removeItem(itemId);
@@ -76,14 +63,6 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
-      {/* 検索バー */}
-      <section className="flex flex-col items-center gap-3 pt-4">
-        <h2 className="text-lg font-medium text-[var(--muted-foreground)]">
-          アイテムを検索
-        </h2>
-        <ItemSearch onSelect={handleSearchSelect} />
-      </section>
-
       {/* ウォッチリスト */}
       <section>
         <div className="mb-4 flex items-center justify-between">
