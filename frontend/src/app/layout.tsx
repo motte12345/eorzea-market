@@ -7,7 +7,7 @@ import { SearchBar } from "@/components/search-bar";
 
 export const metadata: Metadata = {
   title: "QP Tools",
-  description: "FFXIV プレイヤー向けツール集",
+  description: "ツール集",
   icons: { icon: "/icon.png" },
 };
 

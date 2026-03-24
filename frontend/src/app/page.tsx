@@ -12,7 +12,7 @@ const tools: Tool[] = [
   {
     name: "Eorzea Market",
     description:
-      "全サーバーのマーケットボード価格をリアルタイム比較。DC間の転売差益を一目で確認。",
+      "全サーバーのマーケットボード価格をリアルタイム比較。DC間の転売差益を確認。",
     href: "/market",
     icon: "/market-icon.png",
     status: "active",
