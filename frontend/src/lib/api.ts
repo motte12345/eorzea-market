@@ -14,6 +14,7 @@ export interface ItemDetail {
   name_en: string;
   icon_url: string;
   category: string;
+  lodestone_id: string | null;
 }
 
 export interface PriceByWorld {

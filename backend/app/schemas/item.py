@@ -22,6 +22,7 @@ class ItemResponse(BaseModel):
     name_en: str
     icon_url: str
     category: str
+    lodestone_id: Optional[str] = None
 
 
 class PriceByWorldResponse(BaseModel):

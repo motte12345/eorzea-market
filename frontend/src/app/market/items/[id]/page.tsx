@@ -229,14 +229,18 @@ export default function ItemDetailPage({ params }: Props) {
           )}
           <div>
             <h1 className="text-2xl font-bold">
-              <a
-                href={`https://jp.finalfantasyxiv.com/lodestone/playguide/db/item/?patch=&q=${encodeURIComponent(item?.name_en || "")}`}
-                className="eorzeadb_link"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {item?.name_ja || item?.name_en || `Item #${itemId}`}
-              </a>
+              {item?.lodestone_id ? (
+                <a
+                  href={`https://jp.finalfantasyxiv.com/lodestone/playguide/db/item/${item.lodestone_id}/`}
+                  className="eorzeadb_link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {item.name_ja || item.name_en}
+                </a>
+              ) : (
+                item?.name_ja || item?.name_en || `Item #${itemId}`
+              )}
             </h1>
             <div className="flex gap-3 text-sm text-[var(--muted-foreground)]">
               {item?.name_en && <span>{item.name_en}</span>}
