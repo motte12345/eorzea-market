@@ -71,6 +71,50 @@ async def search_items(
     return [ItemSearchResponse.model_validate(row) for row in result.scalars().all()]
 
 
+@router.get("/search/full")
+async def search_items_full(
+    q: str = Query(..., min_length=1),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, le=100),
+    db: AsyncSession = Depends(get_db),
+):
+    """アイテム検索（ページネーション付き）"""
+    from app.models.listing import Listing
+
+    condition = Item.name_ja.ilike(f"%{q}%") | Item.name_en.ilike(f"%{q}%")
+    total = (await db.execute(select(func.count(Item.id)).where(condition))).scalar() or 0
+
+    stmt = (
+        select(
+            Item.id, Item.name_ja, Item.name_en, Item.icon_url, Item.category,
+            func.min(Listing.price_per_unit).label("min_price"),
+        )
+        .outerjoin(Listing, Item.id == Listing.item_id)
+        .where(condition)
+        .group_by(Item.id, Item.name_ja, Item.name_en, Item.icon_url, Item.category)
+        .order_by(Item.name_ja)
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+    )
+    result = await db.execute(stmt)
+    return {
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "items": [
+            {
+                "id": r.id,
+                "name_ja": r.name_ja,
+                "name_en": r.name_en,
+                "icon_url": r.icon_url,
+                "category": r.category,
+                "min_price": r.min_price,
+            }
+            for r in result.all()
+        ],
+    }
+
+
 @router.get("/{item_id}", response_model=ItemResponse)
 async def get_item(item_id: int, db: AsyncSession = Depends(get_db)):
     """アイテム詳細"""

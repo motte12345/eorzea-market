@@ -32,6 +32,11 @@ export function Header() {
           <a href="/market" className="hover:text-[var(--primary)]">
             マーケット
           </a>
+          {isMarket && (
+            <a href="/market/categories" className="hover:text-[var(--primary)]">
+              カテゴリ
+            </a>
+          )}
         </nav>
       </div>
     </header>

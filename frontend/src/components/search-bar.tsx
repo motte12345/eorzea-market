@@ -15,9 +15,13 @@ export function SearchBar() {
     router.push(`/market/items/${item.id}`);
   }
 
+  function handleSearch(query: string) {
+    router.push(`/market/search?q=${encodeURIComponent(query)}`);
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-6 pt-3">
-      <ItemSearch onSelect={handleSelect} placeholder="アイテム検索..." />
+      <ItemSearch onSelect={handleSelect} onSearch={handleSearch} placeholder="アイテム検索（Enterで検索結果ページへ）" />
     </div>
   );
 }

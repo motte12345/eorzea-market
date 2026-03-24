@@ -6,10 +6,11 @@ import { searchItems, type ItemSearchResult } from "@/lib/api";
 
 interface Props {
   onSelect: (item: ItemSearchResult) => void;
+  onSearch?: (query: string) => void;
   placeholder?: string;
 }
 
-export function ItemSearch({ onSelect, placeholder = "アイテム名を入力..." }: Props) {
+export function ItemSearch({ onSelect, onSearch, placeholder = "アイテム名を入力..." }: Props) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -40,6 +41,15 @@ export function ItemSearch({ onSelect, placeholder = "アイテム名を入力..
   }, []);
 
   function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter" && (!isOpen || selectedIndex < 0)) {
+      e.preventDefault();
+      if (onSearch && query.trim()) {
+        onSearch(query.trim());
+        setIsOpen(false);
+      }
+      return;
+    }
+
     if (!isOpen || suggestions.length === 0) return;
 
     if (e.key === "ArrowDown") {
