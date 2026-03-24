@@ -14,29 +14,43 @@ from app.models.item import Item
 logger = logging.getLogger(__name__)
 
 LODESTONE_SEARCH_URL = "https://jp.finalfantasyxiv.com/lodestone/playguide/db/item/"
-ITEM_URL_PATTERN = re.compile(r'/lodestone/playguide/db/item/([a-f0-9]{8,})/')
+ITEM_ENTRY_PATTERN = re.compile(
+    r'<a href="/lodestone/playguide/db/item/([a-f0-9]{8,})/\?patch="'
+    r'[^>]*class="[^"]*db-table__txt--detail_link[^"]*"[^>]*>'
+    r'([^<]+)</a>',
+)
 REQUEST_INTERVAL = 3.0  # 秒
 
 
 async def search_lodestone_id(client: httpx.AsyncClient, item_name: str) -> str | None:
-    """アイテム名で Lodestone を検索し、ハッシュIDを取得"""
+    """アイテム名で Lodestone を完全一致検索し、ハッシュIDを取得"""
     try:
+        # ""で囲んで完全一致検索
         resp = await client.get(
             LODESTONE_SEARCH_URL,
             params={
                 "patch": "",
                 "db_search_category": "item",
                 "category2": "",
-                "q": item_name,
+                "q": f'"{item_name}"',
             },
         )
         if resp.status_code != 200:
             return None
 
         html = resp.text
-        matches = ITEM_URL_PATTERN.findall(html)
+        # アイテム名とIDのペアを抽出して名前が一致するものを選択
+        for match in ITEM_ENTRY_PATTERN.finditer(html):
+            lodestone_id = match.group(1)
+            found_name = match.group(2).strip()
+            if found_name == item_name:
+                return lodestone_id
+
+        # 完全一致がなければ最初の結果を使う
+        matches = ITEM_ENTRY_PATTERN.findall(html)
         if matches:
-            return matches[0]
+            return matches[0][0]
+
         return None
     except Exception as e:
         logger.warning(f"Failed to search '{item_name}': {e}")
