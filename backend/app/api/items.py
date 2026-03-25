@@ -75,7 +75,7 @@ async def search_items(
 async def search_items_full(
     q: str = Query(..., min_length=1),
     page: int = Query(1, ge=1),
-    per_page: int = Query(20, le=100),
+    per_page: int = Query(20, le=200),
     db: AsyncSession = Depends(get_db),
 ):
     """アイテム検索（ページネーション付き）"""
