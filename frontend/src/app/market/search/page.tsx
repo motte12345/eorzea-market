@@ -153,6 +153,7 @@ function SearchContent() {
               <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
                 <th className="px-3 py-2">アイテム</th>
                 <th className="px-3 py-2">カテゴリ</th>
+                <th className="px-3 py-2 text-right">最安値</th>
                 {REGIONS.map((r) => (
                   <th key={r} className="px-3 py-2 text-right">{REGION_SHORT[r]}</th>
                 ))}
@@ -187,6 +188,23 @@ function SearchContent() {
                           {item.category}
                         </a>
                       )}
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono text-xs">
+                      {(() => {
+                        const allMins = REGIONS.map((r) => getRegionMin(item.id, r)).filter(Boolean);
+                        if (allMins.length === 0) {
+                          return item.min_price != null
+                            ? formatGil(item.min_price)
+                            : <span className="text-[var(--muted-foreground)]">-</span>;
+                        }
+                        const best = allMins.reduce((a, b) => a!.min_price < b!.min_price ? a : b)!;
+                        return (
+                          <div>
+                            <span className="text-[var(--positive)]">{formatGil(best.min_price)}</span>
+                            <div className="text-[10px] text-[var(--muted-foreground)]">{best.world_name}</div>
+                          </div>
+                        );
+                      })()}
                     </td>
                     {REGIONS.map((region) => {
                       const price = getRegionMin(item.id, region);
