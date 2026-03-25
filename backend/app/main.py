@@ -13,6 +13,7 @@ from app.api.watchlist import router as watchlist_router
 from app.collector.scheduler import create_scheduler
 from app.config import settings
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
