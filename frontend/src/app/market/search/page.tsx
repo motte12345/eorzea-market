@@ -38,17 +38,15 @@ export default function SearchPage() {
 
 function SearchContent() {
   const searchParams = useSearchParams();
-  const initialQ = searchParams.get("q") || "";
-  const [searchTerm, setSearchTerm] = useState(initialQ);
+  const q = searchParams.get("q") || "";
+  const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<"name" | "price_asc" | "price_desc">("name");
 
   useEffect(() => {
-    if (initialQ) {
-      setSearchTerm(initialQ);
-      setPage(1);
-    }
-  }, [initialQ]);
+    setSearchTerm(q);
+    setPage(1);
+  }, [q]);
 
   // 最大200件を一括取得
   const { data: searchData, isLoading } = useQuery({
