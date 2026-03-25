@@ -325,7 +325,7 @@ export default function HomePage() {
                               {item.name_ja || item.name_en}
                             </div>
                             <div className="text-[10px] text-[var(--muted-foreground)]">
-                              {item.listing_count ?? 0}件出品
+                              {item.min_dc} {item.min_world}
                             </div>
                           </div>
                         </a>

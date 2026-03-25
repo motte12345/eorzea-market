@@ -38,13 +38,19 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
             text(f"""
                 SELECT
                     item_id, name_ja, name_en, icon_url,
-                    global_min AS min_price, listing_count
+                    global_min AS min_price, listing_count, min_dc, min_world
                 FROM (
                     SELECT
                         l.item_id,
                         i.name_ja, i.name_en, i.icon_url,
                         MIN(l.price_per_unit) AS global_min,
-                        COUNT(l.id) AS listing_count
+                        COUNT(l.id) AS listing_count,
+                        SUBSTRING_INDEX(
+                            GROUP_CONCAT(w.data_center ORDER BY l.price_per_unit ASC), ',', 1
+                        ) AS min_dc,
+                        SUBSTRING_INDEX(
+                            GROUP_CONCAT(w.name ORDER BY l.price_per_unit ASC), ',', 1
+                        ) AS min_world
                     FROM listings l
                     JOIN items i ON l.item_id = i.id
                     JOIN worlds w ON l.world_id = w.id
@@ -68,6 +74,8 @@ async def update_rankings(session_factory: async_sessionmaker) -> None:
                 "icon_url": r.icon_url,
                 "min_price": r.min_price,
                 "listing_count": r.listing_count,
+                "min_dc": r.min_dc,
+                "min_world": r.min_world,
             }
             for r in expensive_result.all()
         ]

@@ -125,6 +125,8 @@ export interface RankingItem {
   icon_url: string;
   min_price?: number;
   listing_count?: number;
+  min_dc?: string;
+  min_world?: string;
   buy_price?: number;
   buy_info?: string;
   sell_price?: number;
