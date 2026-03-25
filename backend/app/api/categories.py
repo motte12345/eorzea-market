@@ -58,10 +58,15 @@ async def get_category_items(
         .group_by(Item.id, Item.name_ja, Item.name_en, Item.icon_url, Item.category)
     )
 
+    from sqlalchemy import case, literal
+
+    min_price_expr = func.min(Listing.price_per_unit)
+    has_price = case((min_price_expr.is_(None), literal(1)), else_=literal(0))
+
     if sort == "price_asc":
-        stmt = stmt.order_by(func.min(Listing.price_per_unit).asc().nulls_last())
+        stmt = stmt.order_by(has_price, min_price_expr.asc())
     elif sort == "price_desc":
-        stmt = stmt.order_by(func.min(Listing.price_per_unit).desc().nulls_last())
+        stmt = stmt.order_by(has_price, min_price_expr.desc())
     else:
         stmt = stmt.order_by(Item.name_ja)
 
