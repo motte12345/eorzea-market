@@ -32,7 +32,7 @@ async def get_categories(db: AsyncSession = Depends(get_db)):
 async def get_category_items(
     category: str,
     page: int = Query(1, ge=1),
-    per_page: int = Query(20, le=100),
+    per_page: int = Query(20, le=200),
     sort: str = Query("name", regex="^(name|price_asc|price_desc)$"),
     db: AsyncSession = Depends(get_db),
 ):
