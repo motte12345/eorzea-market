@@ -356,7 +356,7 @@ export default function HomePage() {
         {/* 転売ランキング */}
         <div className="rounded-lg border border-[var(--border)] bg-[var(--card)]">
           <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
-            <h3 className="font-bold">JP ↔ NA 転売ランキング</h3>
+            <h3 className="font-bold">JP ↔ NA 価格差ランキング</h3>
             <div className="flex rounded-md border border-[var(--border)]">
               <button
                 onClick={() => { setArbMode("rate"); setArbExpanded(false); }}
