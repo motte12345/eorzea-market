@@ -26,23 +26,34 @@ export function Breadcrumb() {
   });
   const itemName = itemData?.name_ja || itemData?.name_en || null;
 
-  // トップページでは表示しない
-  if (segments.length === 0) return null;
-
   // トップページでは非表示
   if (segments.length === 0) return null;
 
   const crumbs: Crumb[] = [{ label: "QP Tools", href: "/" }];
+  const isCategories = segments[0] === "market" && segments[1] === "categories";
+  const isCategoryDetail = isCategories && !!segments[2];
+  const isSearch = segments[0] === "market" && segments[1] === "search";
+  const isExcluded = segments[0] === "market" && segments[1] === "excluded";
+  const hasSubpage = isItemPage || isCategories || isSearch || isExcluded;
 
   if (segments[0] === "market") {
     crumbs.push(
-      isItemPage
+      hasSubpage
         ? { label: "マーケット", href: "/market" }
         : { label: "マーケット" }
     );
 
     if (isItemPage) {
       crumbs.push({ label: itemName || `#${itemId}` });
+    } else if (isCategoryDetail) {
+      crumbs.push({ label: "カテゴリ", href: "/market/categories" });
+      crumbs.push({ label: decodeURIComponent(segments[2]) });
+    } else if (isCategories) {
+      crumbs.push({ label: "カテゴリ" });
+    } else if (isSearch) {
+      crumbs.push({ label: "検索結果" });
+    } else if (isExcluded) {
+      crumbs.push({ label: "除外アイテム" });
     }
   }
 
