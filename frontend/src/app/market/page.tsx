@@ -320,9 +320,14 @@ export default function HomePage() {
                           {item.icon_url && (
                             <img src={item.icon_url} alt="" className="h-6 w-6" />
                           )}
-                          <span className="truncate">
-                            {item.name_ja || item.name_en}
-                          </span>
+                          <div className="min-w-0">
+                            <div className="truncate">
+                              {item.name_ja || item.name_en}
+                            </div>
+                            <div className="text-[10px] text-[var(--muted-foreground)]">
+                              {item.listing_count ?? 0}件出品
+                            </div>
+                          </div>
                         </a>
                       </td>
                       <td className="px-4 py-2.5 text-right font-mono text-[var(--primary)]">
