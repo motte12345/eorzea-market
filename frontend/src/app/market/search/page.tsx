@@ -41,7 +41,7 @@ function SearchContent() {
   const q = searchParams.get("q") || "";
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
-  const [sort, setSort] = useState<"name" | "id" | "price_asc" | "price_desc">("name");
+  const [sort, setSort] = useState<"name" | "id_asc" | "id_desc" | "price_asc" | "price_desc">("name");
 
   useEffect(() => {
     setSearchTerm(q);
@@ -68,9 +68,11 @@ function SearchContent() {
       case "price_asc":
         return items.sort((a, b) => (a.min_price ?? Infinity) - (b.min_price ?? Infinity));
       case "price_desc":
-        return items.sort((a, b) => (b.min_price ?? 0) - (a.min_price ?? 0));
-      case "id":
+        return items.sort((a, b) => (b.min_price ?? -1) - (a.min_price ?? -1));
+      case "id_asc":
         return items.sort((a, b) => a.id - b.id);
+      case "id_desc":
+        return items.sort((a, b) => b.id - a.id);
       case "name":
         return items.sort((a, b) => (a.name_ja || a.name_en).localeCompare(b.name_ja || b.name_en, "ja"));
     }
@@ -137,7 +139,8 @@ function SearchContent() {
           <option value="name">名前順</option>
           <option value="price_asc">安い順</option>
           <option value="price_desc">高い順</option>
-          <option value="id">ID順</option>
+          <option value="id_desc">ID（新しい順）</option>
+          <option value="id_asc">ID（古い順）</option>
         </select>
       </div>
 
