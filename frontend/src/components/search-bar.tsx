@@ -21,7 +21,7 @@ export function SearchBar() {
 
   return (
     <div className="mx-auto max-w-7xl px-6 pt-3">
-      <ItemSearch onSelect={handleSelect} onSearch={handleSearch} placeholder="アイテム検索（Enterで検索結果ページへ）" />
+      <ItemSearch onSelect={handleSelect} onSearch={handleSearch} placeholder="アイテム検索..." />
     </div>
   );
 }
