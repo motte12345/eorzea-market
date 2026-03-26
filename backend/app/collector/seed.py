@@ -94,8 +94,10 @@ async def seed_items(session: AsyncSession) -> None:
 
                 category_obj = item_data.get("ItemSearchCategory")
                 category = ""
+                category_en = ""
                 if isinstance(category_obj, dict):
                     category = category_obj.get("Name_ja", "") or ""
+                    category_en = category_obj.get("Name_en", "") or ""
 
                 icon = item_data.get("Icon", "")
                 icon_url = f"https://xivapi.com{icon}" if icon else ""
@@ -106,6 +108,7 @@ async def seed_items(session: AsyncSession) -> None:
                     name_en=item_data.get("Name_en", "") or "",
                     icon_url=icon_url,
                     category=category,
+                    category_en=category_en,
                 ))
                 seeded += 1
 

@@ -15,15 +15,20 @@ async def get_categories(db: AsyncSession = Depends(get_db)):
     stmt = (
         select(
             Item.category,
+            Item.category_en,
             func.count(Item.id).label("item_count"),
         )
         .where(Item.category != "")
-        .group_by(Item.category)
+        .group_by(Item.category, Item.category_en)
         .order_by(Item.category)
     )
     result = await db.execute(stmt)
     return [
-        {"category": row.category, "item_count": row.item_count}
+        {
+            "category": row.category,
+            "category_en": row.category_en,
+            "item_count": row.item_count,
+        }
         for row in result.all()
     ]
 
