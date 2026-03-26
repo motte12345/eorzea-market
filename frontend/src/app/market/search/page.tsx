@@ -214,7 +214,7 @@ function SearchContent() {
                             <div>
                               {formatGil(price.min_price)}
                               <div className="text-[10px] text-[var(--muted-foreground)]">
-                                {price.world_name}
+                                {price.data_center} - {price.world_name}
                               </div>
                             </div>
                           ) : (
