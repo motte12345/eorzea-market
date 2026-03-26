@@ -34,7 +34,7 @@ export default function CategoryItemsPage({ params }: Props) {
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<"name" | "id_asc" | "id_desc" | "price_asc" | "price_desc">("name");
 
-  // 最大200件を一括取得（ソートはクライアント側で統一）
+  // 最大200件を一括取得
   const { data: catData, isLoading } = useQuery({
     queryKey: ["category-items-full", categoryName],
     queryFn: async (): Promise<CategoryItemsResponse> => {
@@ -45,43 +45,31 @@ export default function CategoryItemsPage({ params }: Props) {
     },
   });
 
-  // ソート（すべてクライアント側）
-  const sortedItems = useMemo(() => {
-    if (!catData?.items) return [];
-    const items = [...catData.items];
-    switch (sort) {
-      case "price_asc":
-        return items.sort((a, b) => (a.min_price ?? Infinity) - (b.min_price ?? Infinity));
-      case "price_desc":
-        return items.sort((a, b) => (b.min_price ?? -1) - (a.min_price ?? -1));
-      case "id_asc":
-        return items.sort((a, b) => a.id - b.id);
-      case "id_desc":
-        return items.sort((a, b) => b.id - a.id);
-      case "name":
-        return items.sort((a, b) => (a.name_ja || a.name_en).localeCompare(b.name_ja || b.name_en, "ja"));
-    }
-  }, [catData, sort]);
+  const allItemIds = useMemo(
+    () => catData?.items.map((i) => i.id) ?? [],
+    [catData],
+  );
 
-  // ページネーション
-  const totalPages = Math.ceil(sortedItems.length / PER_PAGE);
-  const pageItems = sortedItems.slice((page - 1) * PER_PAGE, page * PER_PAGE);
-  const pageItemIds = pageItems.map((i) => i.id);
-
-  // リージョン価格
-  const { data: regionPrices } = useQuery({
-    queryKey: ["cat-region-prices", pageItemIds],
-    queryFn: () => getWatchlistPrices(pageItemIds),
-    enabled: pageItemIds.length > 0,
+  // 全アイテムのリージョン価格を一括取得（ソート・表示両方に使う）
+  const { data: allPrices } = useQuery({
+    queryKey: ["cat-all-prices", allItemIds],
+    queryFn: () => getWatchlistPrices(allItemIds),
+    enabled: allItemIds.length > 0,
   });
 
   const priceMap = useMemo(() => {
     const map = new Map<number, WatchlistItem>();
-    if (regionPrices) {
-      for (const item of regionPrices) map.set(item.item_id, item);
+    if (allPrices) {
+      for (const item of allPrices) map.set(item.item_id, item);
     }
     return map;
-  }, [regionPrices]);
+  }, [allPrices]);
+
+  function getGlobalMin(itemId: number): number | null {
+    const item = priceMap.get(itemId);
+    if (!item || item.prices_by_dc.length === 0) return null;
+    return Math.min(...item.prices_by_dc.map((p) => p.min_price));
+  }
 
   function getRegionMin(itemId: number, region: string) {
     const item = priceMap.get(itemId);
@@ -90,6 +78,34 @@ export default function CategoryItemsPage({ params }: Props) {
     if (prices.length === 0) return null;
     return prices.reduce((a, b) => (a.min_price < b.min_price ? a : b));
   }
+
+  // ソート（実際の価格データを使用）
+  const sortedItems = useMemo(() => {
+    if (!catData?.items) return [];
+    const items = [...catData.items];
+    switch (sort) {
+      case "price_asc":
+        return items.sort((a, b) =>
+          (getGlobalMin(a.id) ?? a.min_price ?? Infinity) -
+          (getGlobalMin(b.id) ?? b.min_price ?? Infinity)
+        );
+      case "price_desc":
+        return items.sort((a, b) =>
+          (getGlobalMin(b.id) ?? b.min_price ?? -1) -
+          (getGlobalMin(a.id) ?? a.min_price ?? -1)
+        );
+      case "id_asc":
+        return items.sort((a, b) => a.id - b.id);
+      case "id_desc":
+        return items.sort((a, b) => b.id - a.id);
+      case "name":
+        return items.sort((a, b) => (a.name_ja || a.name_en).localeCompare(b.name_ja || b.name_en, "ja"));
+    }
+  }, [catData, sort, priceMap]);
+
+  // ページネーション
+  const totalPages = Math.ceil(sortedItems.length / PER_PAGE);
+  const pageItems = sortedItems.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   function getArbitrage(itemId: number) {
     const mins = REGIONS.map((r) => {
