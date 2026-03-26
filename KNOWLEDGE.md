@@ -29,3 +29,9 @@
 - localStorage を使うコンポーネントは Hydration mismatch に注意
   - サーバーでは localStorage が存在しない → useEffect で初期化する
   - 例: isInWatchlist() を直接テンプレートで使うとエラー → state経由にする
+
+### 価格データのリージョン問題
+- ウォッチリストAPI (`/watchlist/prices`) は中国・台湾・韓国サーバーのデータも返す
+- フロントは JP/NA/EU/OCE の4リージョンのみ表示
+- ソートや集計で `prices_by_dc` を使う際は、表示対象リージョンでフィルタしないと不一致が起きる
+- カテゴリAPIの `min_price`（LEFT JOIN listings）も全サーバー含むので同様
