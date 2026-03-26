@@ -34,31 +34,32 @@ export default function CategoryItemsPage({ params }: Props) {
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<"name" | "id_asc" | "id_desc" | "price_asc" | "price_desc">("name");
 
-  // 最大200件を一括取得
-  // APIのsortパラメータにマッピング
-  const apiSort = sort === "price_asc" || sort === "price_desc" ? sort : "name";
-
+  // 最大200件を一括取得（ソートはクライアント側で統一）
   const { data: catData, isLoading } = useQuery({
-    queryKey: ["category-items-full", categoryName, apiSort],
+    queryKey: ["category-items-full", categoryName],
     queryFn: async (): Promise<CategoryItemsResponse> => {
       const res = await fetch(
-        `/api/categories/${encodeURIComponent(categoryName)}/items?page=1&per_page=200&sort=${apiSort}`
+        `/api/categories/${encodeURIComponent(categoryName)}/items?page=1&per_page=200`
       );
       return res.json();
     },
   });
 
-  // ソート（ID順はクライアント側、価格・名前はAPI側で済み）
+  // ソート（すべてクライアント側）
   const sortedItems = useMemo(() => {
     if (!catData?.items) return [];
     const items = [...catData.items];
     switch (sort) {
+      case "price_asc":
+        return items.sort((a, b) => (a.min_price ?? Infinity) - (b.min_price ?? Infinity));
+      case "price_desc":
+        return items.sort((a, b) => (b.min_price ?? -1) - (a.min_price ?? -1));
       case "id_asc":
         return items.sort((a, b) => a.id - b.id);
       case "id_desc":
         return items.sort((a, b) => b.id - a.id);
-      default:
-        return items; // API側でソート済み
+      case "name":
+        return items.sort((a, b) => (a.name_ja || a.name_en).localeCompare(b.name_ja || b.name_en, "ja"));
     }
   }, [catData, sort]);
 
