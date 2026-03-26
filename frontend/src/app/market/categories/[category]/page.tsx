@@ -73,12 +73,14 @@ export default function CategoryItemsPage({ params }: Props) {
     return prices.reduce((a, b) => (a.min_price < b.min_price ? a : b));
   }
 
-  // 全アイテムの最安値マップ（ソート用）
+  // 全アイテムの最安値マップ（ソート用、表示対象リージョンのみ）
+  const regionSet = new Set(REGIONS);
   const minPriceMap = useMemo(() => {
     const map = new Map<number, number>();
     for (const [id, item] of priceMap) {
-      if (item.prices_by_dc.length > 0) {
-        map.set(id, Math.min(...item.prices_by_dc.map((p) => p.min_price)));
+      const filtered = item.prices_by_dc.filter((p) => regionSet.has(p.region));
+      if (filtered.length > 0) {
+        map.set(id, Math.min(...filtered.map((p) => p.min_price)));
       }
     }
     return map;
