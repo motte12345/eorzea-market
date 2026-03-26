@@ -79,20 +79,24 @@ export default function CategoryItemsPage({ params }: Props) {
     return prices.reduce((a, b) => (a.min_price < b.min_price ? a : b));
   }
 
-  // ソート（実際の価格データを使用）
+  const isPriceSort = sort === "price_asc" || sort === "price_desc";
+  const pricesReady = priceMap.size > 0;
+
+  // ソート（価格ソートは実データが揃ってから適用）
   const sortedItems = useMemo(() => {
     if (!catData?.items) return [];
     const items = [...catData.items];
+
+    if (isPriceSort && !pricesReady) return items;
+
     switch (sort) {
       case "price_asc":
         return items.sort((a, b) =>
-          (getGlobalMin(a.id) ?? a.min_price ?? Infinity) -
-          (getGlobalMin(b.id) ?? b.min_price ?? Infinity)
+          (getGlobalMin(a.id) ?? Infinity) - (getGlobalMin(b.id) ?? Infinity)
         );
       case "price_desc":
         return items.sort((a, b) =>
-          (getGlobalMin(b.id) ?? b.min_price ?? -1) -
-          (getGlobalMin(a.id) ?? a.min_price ?? -1)
+          (getGlobalMin(b.id) ?? -1) - (getGlobalMin(a.id) ?? -1)
         );
       case "id_asc":
         return items.sort((a, b) => a.id - b.id);
@@ -101,7 +105,7 @@ export default function CategoryItemsPage({ params }: Props) {
       case "name":
         return items.sort((a, b) => (a.name_ja || a.name_en).localeCompare(b.name_ja || b.name_en, "ja"));
     }
-  }, [catData, sort, priceMap]);
+  }, [catData, sort, pricesReady, priceMap]);
 
   // ページネーション
   const totalPages = Math.ceil(sortedItems.length / PER_PAGE);
