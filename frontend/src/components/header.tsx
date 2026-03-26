@@ -33,9 +33,14 @@ export function Header() {
             マーケット
           </a>
           {isMarket && (
-            <a href="/market/categories" className="hover:text-[var(--primary)]">
-              カテゴリ
-            </a>
+            <>
+              <a href="/market/categories" className="hover:text-[var(--primary)]">
+                カテゴリ
+              </a>
+              <a href="/market/releases" className="hover:text-[var(--primary)]">
+                リリースノート
+              </a>
+            </>
           )}
         </nav>
       </div>
