@@ -65,12 +65,6 @@ export default function CategoryItemsPage({ params }: Props) {
     return map;
   }, [allPrices]);
 
-  function getGlobalMin(itemId: number): number | null {
-    const item = priceMap.get(itemId);
-    if (!item || item.prices_by_dc.length === 0) return null;
-    return Math.min(...item.prices_by_dc.map((p) => p.min_price));
-  }
-
   function getRegionMin(itemId: number, region: string) {
     const item = priceMap.get(itemId);
     if (!item) return null;
@@ -79,24 +73,31 @@ export default function CategoryItemsPage({ params }: Props) {
     return prices.reduce((a, b) => (a.min_price < b.min_price ? a : b));
   }
 
-  const isPriceSort = sort === "price_asc" || sort === "price_desc";
-  const pricesReady = priceMap.size > 0;
+  // 全アイテムの最安値マップ（ソート用）
+  const minPriceMap = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const [id, item] of priceMap) {
+      if (item.prices_by_dc.length > 0) {
+        map.set(id, Math.min(...item.prices_by_dc.map((p) => p.min_price)));
+      }
+    }
+    return map;
+  }, [priceMap]);
 
-  // ソート（価格ソートは実データが揃ってから適用）
+  // ソート
   const sortedItems = useMemo(() => {
     if (!catData?.items) return [];
     const items = [...catData.items];
-
-    if (isPriceSort && !pricesReady) return items;
-
     switch (sort) {
       case "price_asc":
         return items.sort((a, b) =>
-          (getGlobalMin(a.id) ?? Infinity) - (getGlobalMin(b.id) ?? Infinity)
+          (minPriceMap.get(a.id) ?? a.min_price ?? Infinity) -
+          (minPriceMap.get(b.id) ?? b.min_price ?? Infinity)
         );
       case "price_desc":
         return items.sort((a, b) =>
-          (getGlobalMin(b.id) ?? -1) - (getGlobalMin(a.id) ?? -1)
+          (minPriceMap.get(b.id) ?? b.min_price ?? -1) -
+          (minPriceMap.get(a.id) ?? a.min_price ?? -1)
         );
       case "id_asc":
         return items.sort((a, b) => a.id - b.id);
@@ -105,7 +106,7 @@ export default function CategoryItemsPage({ params }: Props) {
       case "name":
         return items.sort((a, b) => (a.name_ja || a.name_en).localeCompare(b.name_ja || b.name_en, "ja"));
     }
-  }, [catData, sort, pricesReady, priceMap]);
+  }, [catData, sort, minPriceMap]);
 
   // ページネーション
   const totalPages = Math.ceil(sortedItems.length / PER_PAGE);
