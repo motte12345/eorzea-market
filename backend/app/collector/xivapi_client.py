@@ -22,7 +22,7 @@ class XIVAPIClient:
     ) -> dict[str, Any]:
         """アイテム一覧をページネーションで取得"""
         url = f"{settings.xivapi_base_url}/item"
-        params = {"page": page, "columns": "ID,Name_ja,Name_en,Icon,ItemSearchCategory.Name_ja"}
+        params = {"page": page, "columns": "ID,Name_ja,Name_en,Icon,ItemSearchCategory.Name_ja,ItemSearchCategory.Name_en"}
         response = await client.get(url, params=params)
         response.raise_for_status()
         return response.json()
