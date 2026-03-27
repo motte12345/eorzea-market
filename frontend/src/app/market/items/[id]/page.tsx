@@ -18,7 +18,7 @@ import {
   isInWatchlist,
   removeFromWatchlist,
 } from "@/lib/watchlist-store";
-import { formatGil, timeAgo } from "@/lib/utils";
+import { timeAgo } from "@/lib/utils";
 import { getSettings, saveSettings } from "@/lib/settings-store";
 import { useTranslation, serverListingText, noHistoryForServer, moreItemsText } from "@/lib/i18n";
 
@@ -227,7 +227,7 @@ function HistorySection({
   serverFilter: string;
   onServerFilterChange: (s: string) => void;
 }) {
-  const { t, locale } = useTranslation();
+  const { t, locale, gil } = useTranslation();
   const [expandedWorlds, setExpandedWorlds] = useState<Set<string>>(new Set());
 
   function toggleWorld(key: string) {
@@ -345,7 +345,7 @@ function HistorySection({
                             {world.world_name}
                           </td>
                           <td className="px-3 py-1.5 text-right font-mono">
-                            {latest && formatGil(latest.price_per_unit)}
+                            {latest && gil(latest.price_per_unit)}
                           </td>
                           <td className="px-3 py-1.5 text-right font-mono text-[var(--muted-foreground)]">
                             {world.sales.length}
@@ -366,7 +366,7 @@ function HistorySection({
                                 })}
                               </td>
                               <td className="px-3 py-1 text-right font-mono">
-                                {formatGil(sale.price_per_unit)}
+                                {gil(sale.price_per_unit)}
                               </td>
                               <td className="px-3 py-1 text-right font-mono">
                                 ×{sale.quantity}
@@ -408,7 +408,7 @@ export default function ItemDetailPage({ params }: Props) {
   const searchParams = useSearchParams();
   const initialTab = (searchParams.get("tab") as Tab) || "listings";
   const initialServer = searchParams.get("server") || "";
-  const { t, name, locale } = useTranslation();
+  const { t, name, locale, gil } = useTranslation();
   const [hqFilter, setHqFilter] = useState<boolean | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [historyServer, setHistoryServer] = useState(initialServer);
@@ -672,7 +672,7 @@ export default function ItemDetailPage({ params }: Props) {
               <h3 className="text-sm font-bold uppercase tracking-wide text-[var(--muted-foreground)]">
                 {rg.region}
                 <span className="ml-2 text-xs font-normal">
-                  {t("lowest")} {formatGil(rg.min_price)}
+                  {t("lowest")} {gil(rg.min_price)}
                   {rg.min_world && (
                     <span className="ml-1 text-[var(--muted-foreground)]">
                       ({rg.min_dc} - {rg.min_world})
@@ -705,7 +705,7 @@ export default function ItemDetailPage({ params }: Props) {
                                   : ""
                               }`}
                             >
-                              {formatGil(dcMin)}
+                              {gil(dcMin)}
                             </span>
                           </span>
                           <span className="text-[var(--muted-foreground)]">
@@ -778,7 +778,7 @@ export default function ItemDetailPage({ params }: Props) {
                                             : ""
                                     }`}
                                   >
-                                    {formatGil(world.min_price)}
+                                    {gil(world.min_price)}
                                   </td>
                                   <td className="px-3 py-1.5 text-right font-mono">
                                     {world.min_listing.quantity}
@@ -792,7 +792,7 @@ export default function ItemDetailPage({ params }: Props) {
                                     {world.listing_count}
                                   </td>
                                   <td className="px-3 py-1.5 text-right text-[var(--muted-foreground)]">
-                                    {timeAgo(world.last_upload_at)}
+                                    {timeAgo(world.last_upload_at, locale)}
                                   </td>
                                 </tr>
                                 {isExpanded &&
@@ -805,7 +805,7 @@ export default function ItemDetailPage({ params }: Props) {
                                         {l.retainer_name}
                                       </td>
                                       <td className="px-3 py-1 text-right font-mono">
-                                        {formatGil(l.price_per_unit)}
+                                        {gil(l.price_per_unit)}
                                       </td>
                                       <td className="px-3 py-1 text-right font-mono">
                                         {l.quantity}

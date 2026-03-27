@@ -146,6 +146,11 @@ export function useTranslation() {
     t: (key: TranslationKey) => translations[key][locale],
     name: (nameJa: string, nameEn: string) =>
       locale === "en" && nameEn ? nameEn : nameJa || nameEn,
+    gil: (value: number, showUnit = true) => {
+      const formatted = value.toLocaleString("ja-JP");
+      if (!showUnit) return formatted;
+      return locale === "en" ? `${formatted} gil` : `${formatted}ギル`;
+    },
   };
 }
 

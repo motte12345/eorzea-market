@@ -15,7 +15,7 @@ import {
   removeFromWatchlist as removeItem,
 } from "@/lib/watchlist-store";
 import { TaxSelect, TAX_OPTIONS } from "@/components/tax-toggle";
-import { formatGil, calcArbitrageProfit } from "@/lib/utils";
+import { calcArbitrageProfit } from "@/lib/utils";
 import { getSettings, saveSettings } from "@/lib/settings-store";
 import { useTranslation, itemCountSuffix, showMoreText } from "@/lib/i18n";
 
@@ -28,7 +28,7 @@ const REGION_SHORT: Record<string, string> = {
 };
 
 export default function HomePage() {
-  const { t, name, locale } = useTranslation();
+  const { t, name, locale, gil } = useTranslation();
   const [itemIds, setItemIds] = useState<number[]>([]);
   const [taxIndex, setTaxIndex] = useState(0);
   const [arbRegions, setArbRegions] = useState<string[]>(REGIONS);
@@ -242,7 +242,7 @@ export default function HomePage() {
                                         : ""
                                   }
                                 >
-                                  {formatGil(price.min_price)}
+                                  {gil(price.min_price)}
                                 </span>
                                 <div className="text-[10px] text-[var(--muted-foreground)]">
                                   {price.data_center} - {price.world_name}
@@ -258,7 +258,7 @@ export default function HomePage() {
                         {arb && arb.profit > 0 ? (
                           <div>
                             <span className="text-[var(--positive)]">
-                              +{formatGil(arb.profit)}
+                              +{gil(arb.profit)}
                             </span>
                             <div className="text-[10px] text-[var(--muted-foreground)]">
                               {arb.rate.toFixed(1)}%
@@ -333,7 +333,7 @@ export default function HomePage() {
                         </a>
                       </td>
                       <td className="px-4 py-2.5 text-right font-mono text-[var(--primary)]">
-                        {formatGil(item.min_price ?? 0)}
+                        {gil(item.min_price ?? 0)}
                       </td>
                     </tr>
                   ))}
@@ -419,7 +419,7 @@ export default function HomePage() {
                           </td>
                           <td className="px-4 py-2.5 text-right">
                             <div className="font-mono text-[var(--positive)]">
-                              +{formatGil(item.profit ?? 0)}
+                              +{gil(item.profit ?? 0)}
                             </div>
                             <div className="text-[10px] text-[var(--muted-foreground)]">
                               {item.profit_rate}%

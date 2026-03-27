@@ -10,7 +10,6 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { formatGil } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 
 interface PriceHistoryEntry {
@@ -68,7 +67,7 @@ function formatDate(dateStr: string): string {
 }
 
 export function PriceChart({ data }: Props) {
-  const { t } = useTranslation();
+  const { t, gil } = useTranslation();
 
   if (data.length === 0) {
     return (
@@ -100,7 +99,7 @@ export function PriceChart({ data }: Props) {
             <YAxis
               stroke="var(--muted-foreground)"
               fontSize={11}
-              tickFormatter={(v) => formatGil(v, false)}
+              tickFormatter={(v) => gil(v, false)}
             />
             <Tooltip
               contentStyle={{
@@ -111,7 +110,7 @@ export function PriceChart({ data }: Props) {
               }}
               labelFormatter={formatDate}
               formatter={(value: number, name: string) => [
-                `${formatGil(value)}`,
+                `${gil(value)}`,
                 labelMap[name] ?? name,
               ]}
             />

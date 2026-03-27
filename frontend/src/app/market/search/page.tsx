@@ -3,7 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense, useMemo } from "react";
-import { formatGil } from "@/lib/utils";
 import { getWatchlistPrices, type WatchlistItem } from "@/lib/api";
 import { useTranslation, searchResultsText, top200Text } from "@/lib/i18n";
 
@@ -38,7 +37,7 @@ export default function SearchPage() {
 }
 
 function SearchContent() {
-  const { t, name, locale } = useTranslation();
+  const { t, name, locale, gil } = useTranslation();
   const searchParams = useSearchParams();
   const q = searchParams.get("q") || "";
   const [searchTerm, setSearchTerm] = useState("");
@@ -196,13 +195,13 @@ function SearchContent() {
                         const allMins = REGIONS.map((r) => getRegionMin(item.id, r)).filter(Boolean);
                         if (allMins.length === 0) {
                           return item.min_price != null
-                            ? formatGil(item.min_price)
+                            ? gil(item.min_price)
                             : <span className="text-[var(--muted-foreground)]">-</span>;
                         }
                         const best = allMins.reduce((a, b) => a!.min_price < b!.min_price ? a : b)!;
                         return (
                           <div>
-                            <span className="text-[var(--positive)]">{formatGil(best.min_price)}</span>
+                            <span className="text-[var(--positive)]">{gil(best.min_price)}</span>
                             <div className="text-[10px] text-[var(--muted-foreground)]">{best.world_name}</div>
                           </div>
                         );
@@ -214,7 +213,7 @@ function SearchContent() {
                         <td key={region} className="px-3 py-2 text-right font-mono text-xs">
                           {price ? (
                             <div>
-                              {formatGil(price.min_price)}
+                              {gil(price.min_price)}
                               <div className="text-[10px] text-[var(--muted-foreground)]">
                                 {price.data_center} - {price.world_name}
                               </div>
@@ -227,7 +226,7 @@ function SearchContent() {
                     })}
                     <td className="px-3 py-2 text-right font-mono text-xs">
                       {arb ? (
-                        <span className="text-[var(--positive)]">+{formatGil(arb)}</span>
+                        <span className="text-[var(--positive)]">+{gil(arb)}</span>
                       ) : (
                         <span className="text-[var(--muted-foreground)]">-</span>
                       )}
