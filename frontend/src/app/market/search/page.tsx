@@ -61,15 +61,54 @@ function SearchContent() {
     enabled: searchTerm.length > 0,
   });
 
+  const allItemIds = useMemo(
+    () => searchData?.items.map((i) => i.id) ?? [],
+    [searchData],
+  );
+
+  // 全アイテムのリージョン価格を一括取得（ソート・表示両方に使う）
+  const { data: allPrices } = useQuery({
+    queryKey: ["search-all-prices", allItemIds],
+    queryFn: () => getWatchlistPrices(allItemIds),
+    enabled: allItemIds.length > 0,
+  });
+
+  const priceMap = useMemo(() => {
+    const map = new Map<number, WatchlistItem>();
+    if (allPrices) {
+      for (const item of allPrices) map.set(item.item_id, item);
+    }
+    return map;
+  }, [allPrices]);
+
+  // 全アイテムの最安値マップ（ソート用、表示対象リージョンのみ）
+  const regionSet = new Set(REGIONS);
+  const minPriceMap = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const [id, item] of priceMap) {
+      const filtered = item.prices_by_dc.filter((p) => regionSet.has(p.region));
+      if (filtered.length > 0) {
+        map.set(id, Math.min(...filtered.map((p) => p.min_price)));
+      }
+    }
+    return map;
+  }, [priceMap]);
+
   // ソート
   const sortedItems = useMemo(() => {
     if (!searchData?.items) return [];
     const items = [...searchData.items];
     switch (sort) {
       case "price_asc":
-        return items.sort((a, b) => (a.min_price ?? Infinity) - (b.min_price ?? Infinity));
+        return items.sort((a, b) =>
+          (minPriceMap.get(a.id) ?? a.min_price ?? Infinity) -
+          (minPriceMap.get(b.id) ?? b.min_price ?? Infinity)
+        );
       case "price_desc":
-        return items.sort((a, b) => (b.min_price ?? -1) - (a.min_price ?? -1));
+        return items.sort((a, b) =>
+          (minPriceMap.get(b.id) ?? b.min_price ?? -1) -
+          (minPriceMap.get(a.id) ?? a.min_price ?? -1)
+        );
       case "id_asc":
         return items.sort((a, b) => a.id - b.id);
       case "id_desc":
@@ -77,29 +116,11 @@ function SearchContent() {
       case "name":
         return items.sort((a, b) => (a.name_ja || a.name_en).localeCompare(b.name_ja || b.name_en, "ja"));
     }
-  }, [searchData, sort]);
+  }, [searchData, sort, minPriceMap]);
 
   // ページネーション（クライアント側）
   const totalPages = Math.ceil(sortedItems.length / PER_PAGE);
   const pageItems = sortedItems.slice((page - 1) * PER_PAGE, page * PER_PAGE);
-  const pageItemIds = pageItems.map((i) => i.id);
-
-  // 表示中のアイテムのリージョン価格を取得
-  const { data: regionPrices } = useQuery({
-    queryKey: ["search-region-prices", pageItemIds],
-    queryFn: () => getWatchlistPrices(pageItemIds),
-    enabled: pageItemIds.length > 0,
-  });
-
-  const priceMap = useMemo(() => {
-    const map = new Map<number, WatchlistItem>();
-    if (regionPrices) {
-      for (const item of regionPrices) {
-        map.set(item.item_id, item);
-      }
-    }
-    return map;
-  }, [regionPrices]);
 
   function getRegionMin(itemId: number, region: string) {
     const item = priceMap.get(itemId);
