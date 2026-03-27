@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getItem } from "@/lib/api";
+import { useTranslation } from "@/lib/i18n";
 
 interface Crumb {
   label: string;
@@ -12,21 +13,21 @@ interface Crumb {
 export function Breadcrumb() {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
+  const { t, name, locale } = useTranslation();
 
-  // /market/items/[id] のパターンからアイテムIDを抽出
   const isItemPage =
     segments[0] === "market" && segments[1] === "items" && !!segments[2];
   const itemId = isItemPage ? Number(segments[2]) : null;
 
-  // hooks は常に呼ぶ（条件分岐の前に）
   const { data: itemData } = useQuery({
     queryKey: ["item", itemId],
     queryFn: () => getItem(itemId!),
     enabled: itemId !== null,
   });
-  const itemName = itemData?.name_ja || itemData?.name_en || null;
+  const itemName = itemData
+    ? name(itemData.name_ja, itemData.name_en)
+    : null;
 
-  // トップページでは非表示
   if (segments.length === 0) return null;
 
   const crumbs: Crumb[] = [{ label: "QP Tools", href: "/" }];
@@ -39,21 +40,21 @@ export function Breadcrumb() {
   if (segments[0] === "market") {
     crumbs.push(
       hasSubpage
-        ? { label: "マーケット", href: "/market" }
-        : { label: "マーケット" }
+        ? { label: t("market"), href: "/market" }
+        : { label: t("market") }
     );
 
     if (isItemPage) {
       crumbs.push({ label: itemName || `#${itemId}` });
     } else if (isCategoryDetail) {
-      crumbs.push({ label: "カテゴリ", href: "/market/categories" });
+      crumbs.push({ label: t("categories"), href: "/market/categories" });
       crumbs.push({ label: decodeURIComponent(segments[2]) });
     } else if (isCategories) {
-      crumbs.push({ label: "カテゴリ" });
+      crumbs.push({ label: t("categories") });
     } else if (isSearch) {
-      crumbs.push({ label: "検索結果" });
+      crumbs.push({ label: t("searchResults") });
     } else if (isExcluded) {
-      crumbs.push({ label: "除外アイテム" });
+      crumbs.push({ label: t("excludedItems") });
     }
   }
 

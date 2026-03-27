@@ -17,6 +17,7 @@ import {
 import { TaxSelect, TAX_OPTIONS } from "@/components/tax-toggle";
 import { formatGil, calcArbitrageProfit } from "@/lib/utils";
 import { getSettings, saveSettings } from "@/lib/settings-store";
+import { useTranslation, itemCountSuffix, showMoreText } from "@/lib/i18n";
 
 const REGIONS = ["Japan", "North-America", "Europe", "Oceania"];
 const REGION_SHORT: Record<string, string> = {
@@ -27,6 +28,7 @@ const REGION_SHORT: Record<string, string> = {
 };
 
 export default function HomePage() {
+  const { t, name, locale } = useTranslation();
   const [itemIds, setItemIds] = useState<number[]>([]);
   const [taxIndex, setTaxIndex] = useState(0);
   const [arbRegions, setArbRegions] = useState<string[]>(REGIONS);
@@ -120,10 +122,10 @@ export default function HomePage() {
       {/* ウォッチリスト */}
       <section>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold">ウォッチリスト</h2>
+          <h2 className="text-xl font-bold">{t("watchlist")}</h2>
           {itemIds.length > 0 && (
             <span className="text-sm text-[var(--muted-foreground)]">
-              {itemIds.length} アイテム
+              {itemCountSuffix(itemIds.length, locale)}
             </span>
           )}
         </div>
@@ -132,7 +134,7 @@ export default function HomePage() {
         {itemIds.length > 0 && (
           <div className="mb-3 flex flex-wrap items-center gap-4 text-xs">
             <div className="flex items-center gap-3">
-              <span className="text-[var(--muted-foreground)]">差益比較:</span>
+              <span className="text-[var(--muted-foreground)]">{t("profitCompare")}</span>
               {REGIONS.map((r) => (
                 <label
                   key={r}
@@ -162,15 +164,15 @@ export default function HomePage() {
 
         {itemIds.length === 0 && (
           <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-8 text-center text-[var(--muted-foreground)]">
-            <p>ウォッチリストにアイテムがありません</p>
+            <p>{t("emptyWatchlist")}</p>
             <p className="mt-2 text-sm">
-              上の検索バーからアイテムを探して追加してください
+              {t("emptyWatchlistHint")}
             </p>
           </div>
         )}
 
         {isLoading && (
-          <p className="text-[var(--muted-foreground)]">読み込み中...</p>
+          <p className="text-[var(--muted-foreground)]">{t("loading")}</p>
         )}
 
         {watchlistData && watchlistData.length > 0 && (
@@ -178,7 +180,7 @@ export default function HomePage() {
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] bg-[var(--card)] text-left text-[var(--muted-foreground)]">
-                  <th className="px-3 py-2.5">アイテム</th>
+                  <th className="px-3 py-2.5">{t("item")}</th>
                   {REGIONS.map((r) => (
                     <th
                       key={r}
@@ -189,7 +191,7 @@ export default function HomePage() {
                       {REGION_SHORT[r]}
                     </th>
                   ))}
-                  <th className="px-3 py-2.5 text-right">差益</th>
+                  <th className="px-3 py-2.5 text-right">{t("profit")}</th>
                   <th className="px-3 py-2.5 text-center w-10"></th>
                 </tr>
               </thead>
@@ -209,7 +211,7 @@ export default function HomePage() {
                           {item.icon_url && (
                             <img src={item.icon_url} alt="" className="h-6 w-6" />
                           )}
-                          <span>{item.name_ja || item.name_en}</span>
+                          <span>{name(item.name_ja, item.name_en)}</span>
                         </a>
                       </td>
                       {REGIONS.map((region) => {
@@ -270,7 +272,7 @@ export default function HomePage() {
                         <button
                           onClick={() => handleRemove(item.item_id)}
                           className="text-[var(--muted-foreground)] hover:text-[var(--destructive)]"
-                          title="削除"
+                          title={t("delete")}
                         >
                           ✕
                         </button>
@@ -286,19 +288,19 @@ export default function HomePage() {
 
       {/* ランキング */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">ランキング</h2>
+        <h2 className="text-xl font-bold">{t("ranking")}</h2>
         <a
           href="/market/excluded"
           className="text-xs text-[var(--muted-foreground)] hover:text-[var(--primary)]"
         >
-          除外アイテム一覧
+          {t("excludedItemsLink")}
         </a>
       </div>
       <section className="grid gap-6 md:grid-cols-2">
         {/* 高額アイテム */}
         <div className="rounded-lg border border-[var(--border)] bg-[var(--card)]">
           <div className="border-b border-[var(--border)] px-4 py-3">
-            <h3 className="font-bold">高額アイテム</h3>
+            <h3 className="font-bold">{t("expensiveItems")}</h3>
           </div>
           {expensiveItems && expensiveItems.length > 0 ? (
             <>
@@ -322,7 +324,7 @@ export default function HomePage() {
                           )}
                           <div className="min-w-0">
                             <div className="truncate">
-                              {item.name_ja || item.name_en}
+                              {name(item.name_ja, item.name_en)}
                             </div>
                             <div className="text-[10px] text-[var(--muted-foreground)]">
                               {item.min_dc} {item.min_world}
@@ -342,13 +344,13 @@ export default function HomePage() {
                   onClick={() => setExpExpanded((v) => !v)}
                   className="w-full border-t border-[var(--border)] py-2 text-center text-xs text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors"
                 >
-                  {expExpanded ? "折りたたむ" : `他 ${expensiveItems.length - 5} 件を表示`}
+                  {expExpanded ? t("collapse") : showMoreText(expensiveItems.length - 5, locale)}
                 </button>
               )}
             </>
           ) : (
             <p className="px-4 py-6 text-center text-sm text-[var(--muted-foreground)]">
-              データ取得中...
+              {t("fetchingData")}
             </p>
           )}
         </div>
@@ -356,7 +358,7 @@ export default function HomePage() {
         {/* 転売ランキング */}
         <div className="rounded-lg border border-[var(--border)] bg-[var(--card)]">
           <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
-            <h3 className="font-bold">JP ↔ NA 価格差ランキング</h3>
+            <h3 className="font-bold">{t("arbitrageRanking")}</h3>
             <div className="flex rounded-md border border-[var(--border)]">
               <button
                 onClick={() => { setArbMode("rate"); setArbExpanded(false); }}
@@ -366,7 +368,7 @@ export default function HomePage() {
                     : "text-[var(--muted-foreground)]"
                 }`}
               >
-                利益率順
+                {t("profitRateSort")}
               </button>
               <button
                 onClick={() => { setArbMode("profit"); setArbExpanded(false); }}
@@ -376,7 +378,7 @@ export default function HomePage() {
                     : "text-[var(--muted-foreground)]"
                 }`}
               >
-                差額順
+                {t("profitAmountSort")}
               </button>
             </div>
           </div>
@@ -407,7 +409,7 @@ export default function HomePage() {
                               )}
                               <div className="min-w-0">
                                 <div className="truncate">
-                                  {item.name_ja || item.name_en}
+                                  {name(item.name_ja, item.name_en)}
                                 </div>
                                 <div className="text-[10px] text-[var(--muted-foreground)]">
                                   {buyDC} → {sellDC}
@@ -433,13 +435,13 @@ export default function HomePage() {
                     onClick={() => setArbExpanded((v) => !v)}
                     className="w-full border-t border-[var(--border)] py-2 text-center text-xs text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors"
                   >
-                    {arbExpanded ? "折りたたむ" : `他 ${filtered.length - 5} 件を表示`}
+                    {arbExpanded ? t("collapse") : showMoreText(filtered.length - 5, locale)}
                   </button>
                 )}
               </>
             ) : (
               <p className="px-4 py-6 text-center text-sm text-[var(--muted-foreground)]">
-                データ取得中...
+                {t("fetchingData")}
               </p>
             );
           })()}

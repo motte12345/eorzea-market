@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { searchItems, type ItemSearchResult } from "@/lib/api";
+import { useTranslation } from "@/lib/i18n";
 
 interface Props {
   onSelect: (item: ItemSearchResult) => void;
@@ -10,7 +11,8 @@ interface Props {
   placeholder?: string;
 }
 
-export function ItemSearch({ onSelect, onSearch, placeholder = "アイテム名を入力..." }: Props) {
+export function ItemSearch({ onSelect, onSearch, placeholder }: Props) {
+  const { t, name } = useTranslation();
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -84,7 +86,7 @@ export function ItemSearch({ onSelect, onSearch, placeholder = "アイテム名�
         }}
         onFocus={() => setIsOpen(true)}
         onKeyDown={handleKeyDown}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t("searchInputPlaceholder")}
         className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:border-[var(--primary)] focus:outline-none"
       />
 
@@ -105,7 +107,7 @@ export function ItemSearch({ onSelect, onSearch, placeholder = "アイテム名�
               )}
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium">
-                  {item.name_ja || item.name_en}
+                  {name(item.name_ja, item.name_en)}
                 </div>
                 <div className="truncate text-xs text-[var(--muted-foreground)]">
                   {item.name_en}

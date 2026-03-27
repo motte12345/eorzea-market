@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation, itemCount } from "@/lib/i18n";
 
 interface Category {
   category: string;
@@ -8,17 +9,17 @@ interface Category {
 }
 
 interface CategorySection {
-  title: string;
-  subsections?: { title: string; categories: string[] }[];
+  titleKey: string;
+  subsections?: { titleKey: string; categories: string[] }[];
   categories?: string[];
 }
 
 const CATEGORY_ORDER: CategorySection[] = [
   {
-    title: "メインアーム/サブアーム",
+    titleKey: "mainSubArms",
     subsections: [
       {
-        title: "バトルジョブ",
+        titleKey: "battleJobs",
         categories: [
           "片手剣", "斧", "両手剣", "ガンブレード", "槍", "両手鎌",
           "格闘武器", "刀", "双剣", "二刀流武器",
@@ -27,27 +28,27 @@ const CATEGORY_ORDER: CategorySection[] = [
         ],
       },
       {
-        title: "クラフター",
+        titleKey: "crafters",
         categories: [
           "木工道具", "鍛冶道具", "甲冑道具", "彫金道具",
           "革細工道具", "裁縫道具", "錬金道具", "調理道具",
         ],
       },
       {
-        title: "ギャザラー",
+        titleKey: "gatherers",
         categories: ["採掘道具", "園芸道具", "漁道具", "釣り餌"],
       },
     ],
   },
   {
-    title: "防具/アクセサリ",
+    titleKey: "armorAccessories",
     categories: [
       "盾", "頭防具", "胴防具", "手防具", "脚防具", "足防具",
       "耳飾り", "首飾り", "腕輪", "指輪",
     ],
   },
   {
-    title: "その他",
+    titleKey: "other",
     categories: [
       "薬品", "食材", "調理品", "水産物",
       "石材", "金属材", "木材", "布材", "皮革材", "骨材",
@@ -57,7 +58,7 @@ const CATEGORY_ORDER: CategorySection[] = [
     ],
   },
   {
-    title: "ハウジング",
+    titleKey: "housing",
     categories: [
       "外装建材", "内装建材", "庭具",
       "調度品(一般)", "調度品(椅子・寝台)", "調度品(台座)",
@@ -68,6 +69,8 @@ const CATEGORY_ORDER: CategorySection[] = [
 ];
 
 export default function CategoriesPage() {
+  const { t, locale } = useTranslation();
+
   const { data } = useQuery({
     queryKey: ["categories"],
     queryFn: async (): Promise<Category[]> => {
@@ -109,7 +112,7 @@ export default function CategoriesPage() {
         className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-sm transition-colors hover:border-[var(--primary)]"
       >
         <span>{cat}</span>
-        <span className="text-xs text-[var(--muted-foreground)]">{count}件</span>
+        <span className="text-xs text-[var(--muted-foreground)]">{itemCount(count, locale)}</span>
       </a>
     );
   }
@@ -124,21 +127,21 @@ export default function CategoriesPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold">カテゴリ一覧</h2>
+      <h2 className="text-xl font-bold">{t("categoryList")}</h2>
 
       {data &&
         CATEGORY_ORDER.map((section) => (
-          <div key={section.title} className="space-y-4">
+          <div key={section.titleKey} className="space-y-4">
             <h3 className="border-b border-[var(--border)] pb-1 text-lg font-bold text-[var(--primary)]">
-              {section.title}
+              {t(section.titleKey as any)}
             </h3>
 
             {section.categories && renderCategories(section.categories)}
 
             {section.subsections?.map((sub) => (
-              <div key={sub.title} className="space-y-2">
+              <div key={sub.titleKey} className="space-y-2">
                 <h4 className="text-sm font-bold text-[var(--muted-foreground)]">
-                  {sub.title}
+                  {t(sub.titleKey as any)}
                 </h4>
                 {renderCategories(sub.categories)}
               </div>
@@ -149,7 +152,7 @@ export default function CategoriesPage() {
       {unlisted.length > 0 && (
         <div className="space-y-4">
           <h3 className="border-b border-[var(--border)] pb-1 text-lg font-bold text-[var(--primary)]">
-            その他のカテゴリ
+            {t("otherCategories")}
           </h3>
           <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {unlisted.map((cat) => renderCategoryCard(cat.category))}

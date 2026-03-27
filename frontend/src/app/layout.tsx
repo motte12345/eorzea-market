@@ -4,6 +4,7 @@ import { Providers } from "./providers";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Header } from "@/components/header";
 import { SearchBar } from "@/components/search-bar";
+import { Footer } from "@/components/footer";
 
 export const metadata: Metadata = {
   title: "QP Tools",
@@ -32,16 +33,7 @@ export default function RootLayout({
           <Breadcrumb />
           <SearchBar />
           <main className="mx-auto max-w-7xl px-6 py-6">{children}</main>
-          <footer className="border-t border-[var(--border)] px-6 py-4 mt-12">
-            <div className="mx-auto max-w-7xl text-center text-[10px] leading-relaxed text-[var(--muted-foreground)]">
-              <p>
-                FINAL FANTASY XIV &copy; SQUARE ENIX CO., LTD. All Rights Reserved.
-              </p>
-              <p>
-                記載されている会社名・製品名・システム名などは、各社の商標、または登録商標です。
-              </p>
-            </div>
-          </footer>
+          <Footer />
         </Providers>
       </body>
     </html>

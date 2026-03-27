@@ -20,6 +20,7 @@ import {
 } from "@/lib/watchlist-store";
 import { formatGil, timeAgo } from "@/lib/utils";
 import { getSettings, saveSettings } from "@/lib/settings-store";
+import { useTranslation, serverListingText, noHistoryForServer, moreItemsText } from "@/lib/i18n";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -226,6 +227,7 @@ function HistorySection({
   serverFilter: string;
   onServerFilterChange: (s: string) => void;
 }) {
+  const { t, locale } = useTranslation();
   const [expandedWorlds, setExpandedWorlds] = useState<Set<string>>(new Set());
 
   function toggleWorld(key: string) {
@@ -252,9 +254,9 @@ function HistorySection({
   if (isLoading) {
     return (
       <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-8 text-center">
-        <p className="text-[var(--foreground)]">売買履歴を取得中...</p>
+        <p className="text-[var(--foreground)]">{t("fetchingHistory")}</p>
         <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-          初回は少し時間がかかります。
+          {t("firstLoadSlowShort")}
         </p>
       </div>
     );
@@ -263,7 +265,7 @@ function HistorySection({
   if (history.length === 0) {
     return (
       <p className="py-8 text-center text-[var(--muted-foreground)]">
-        売買履歴がありません
+        {t("noHistory")}
       </p>
     );
   }
@@ -272,13 +274,13 @@ function HistorySection({
     <div className="space-y-3">
       {/* サーバーフィルタ */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-[var(--muted-foreground)]">サーバー:</span>
+        <span className="text-xs text-[var(--muted-foreground)]">{t("server")}</span>
         <select
           value={serverFilter}
           onChange={(e) => onServerFilterChange(e.target.value)}
           className="rounded border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-xs text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none"
         >
-          <option value="">すべて</option>
+          <option value="">{t("all")}</option>
           {servers.map((s) => (
             <option key={s} value={s}>
               {s}
@@ -290,14 +292,14 @@ function HistorySection({
             onClick={() => onServerFilterChange("")}
             className="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
           >
-            クリア
+            {t("clear")}
           </button>
         )}
       </div>
 
       {groups.some((g) => g.noData) && serverFilter && (
         <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] px-4 py-2 text-sm text-[var(--muted-foreground)]">
-          {serverFilter} の売買履歴はありません。同DC内の他サーバーの履歴を表示しています。
+          {noHistoryForServer(serverFilter, locale)}
         </div>
       )}
 
@@ -313,15 +315,15 @@ function HistorySection({
                   {dc.data_center}
                 </span>
                 <span className="text-xs text-[var(--muted-foreground)]">
-                  {dc.total}件
+                  {dc.total}{locale === "ja" ? "件" : ` items`}
                 </span>
               </div>
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-[var(--muted-foreground)]">
                     <th className="px-3 py-1.5 text-left font-normal">Server</th>
-                    <th className="px-3 py-1.5 text-right font-normal">直近取引</th>
-                    <th className="px-3 py-1.5 text-right font-normal">件数</th>
+                    <th className="px-3 py-1.5 text-right font-normal">{t("latestTrade")}</th>
+                    <th className="px-3 py-1.5 text-right font-normal">{t("count")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -383,7 +385,7 @@ function HistorySection({
                               colSpan={3}
                               className="px-3 py-1 text-center text-[var(--muted-foreground)]"
                             >
-                              他 {world.sales.length - 15} 件
+                              {moreItemsText(world.sales.length - 15, locale)}
                             </td>
                           </tr>
                         )}
@@ -406,6 +408,7 @@ export default function ItemDetailPage({ params }: Props) {
   const searchParams = useSearchParams();
   const initialTab = (searchParams.get("tab") as Tab) || "listings";
   const initialServer = searchParams.get("server") || "";
+  const { t, name, locale } = useTranslation();
   const [hqFilter, setHqFilter] = useState<boolean | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [historyServer, setHistoryServer] = useState(initialServer);
@@ -504,14 +507,14 @@ export default function ItemDetailPage({ params }: Props) {
       await refreshItem(itemId);
       await queryClient.invalidateQueries({ queryKey: ["item-prices", itemId] });
       await queryClient.invalidateQueries({ queryKey: ["item-stats", itemId] });
-      setRefreshMsg("更新完了");
+      setRefreshMsg(t("updateComplete"));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "";
       if (msg.includes("429")) {
         // レスポンスからクールダウン残り時間を取得
-        setRefreshMsg("クールダウン中（2分間隔）");
+        setRefreshMsg(t("updateCooldown"));
       } else {
-        setRefreshMsg("更新に失敗しました");
+        setRefreshMsg(t("updateFailed"));
       }
     } finally {
       setIsRefreshing(false);
@@ -552,10 +555,10 @@ export default function ItemDetailPage({ params }: Props) {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  {item.name_ja || item.name_en}
+                  {name(item.name_ja || "", item.name_en || "")}
                 </a>
               ) : (
-                item?.name_ja || item?.name_en || `Item #${itemId}`
+                (item ? name(item.name_ja || "", item.name_en || "") : null) || `Item #${itemId}`
               )}
             </h1>
             <div className="flex gap-3 text-sm text-[var(--muted-foreground)]">
@@ -574,7 +577,7 @@ export default function ItemDetailPage({ params }: Props) {
             disabled={isRefreshing}
             className="rounded-lg bg-[var(--muted)] px-4 py-2 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--border)] disabled:opacity-50"
           >
-            {isRefreshing ? "更新中..." : "価格を更新"}
+            {isRefreshing ? t("updating") : t("updatePrice")}
           </button>
           {refreshMsg && (
             <span className="self-center text-xs text-[var(--muted-foreground)]">
@@ -589,7 +592,7 @@ export default function ItemDetailPage({ params }: Props) {
               : "bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90"
             }`}
           >
-            {inWatchlist ? "ウォッチリストから削除" : "ウォッチリストに追加"}
+            {inWatchlist ? t("removeFromWatchlist") : t("addToWatchlist")}
           </button>
         </div>
       </div>
@@ -599,9 +602,9 @@ export default function ItemDetailPage({ params }: Props) {
         <div className="flex gap-1">
           {(
             [
-              { key: "listings", label: `出品一覧 (${totalListings})` },
-              { key: "history", label: "売買履歴" },
-              { key: "chart", label: "価格推移" },
+              { key: "listings", label: `${t("listingsTab")} (${totalListings})` },
+              { key: "history", label: t("historyTab") },
+              { key: "chart", label: t("chartTab") },
             ] as const
           ).map((tab) => (
             <button
@@ -644,9 +647,9 @@ export default function ItemDetailPage({ params }: Props) {
               onChange={(e) => handleSortChange(e.target.value as ListingSort)}
               className="rounded border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-xs text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none"
             >
-              <option value="price-asc">安い順</option>
-              <option value="price-desc">高い順</option>
-              <option value="server">サーバー名順</option>
+              <option value="price-asc">{t("sortPriceAsc")}</option>
+              <option value="price-desc">{t("sortPriceDesc")}</option>
+              <option value="server">{t("sortServer")}</option>
             </select>
           </div>
         )}
@@ -657,9 +660,9 @@ export default function ItemDetailPage({ params }: Props) {
         <>
           {pricesLoading && (
             <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-8 text-center">
-              <p className="text-[var(--foreground)]">価格データを取得中...</p>
+              <p className="text-[var(--foreground)]">{t("fetchingPrices")}</p>
               <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-                初回はデータ取得に時間がかかることがあります
+                {t("firstLoadSlow")}
               </p>
             </div>
           )}
@@ -669,7 +672,7 @@ export default function ItemDetailPage({ params }: Props) {
               <h3 className="text-sm font-bold uppercase tracking-wide text-[var(--muted-foreground)]">
                 {rg.region}
                 <span className="ml-2 text-xs font-normal">
-                  最安 {formatGil(rg.min_price)}
+                  {t("lowest")} {formatGil(rg.min_price)}
                   {rg.min_world && (
                     <span className="ml-1 text-[var(--muted-foreground)]">
                       ({rg.min_dc} - {rg.min_world})
@@ -694,7 +697,7 @@ export default function ItemDetailPage({ params }: Props) {
                         </div>
                         <div className="flex items-center gap-3 text-xs">
                           <span>
-                            最安{" "}
+                            {t("lowest")}{" "}
                             <span
                               className={`font-mono font-bold ${
                                 dcMin === globalMin
@@ -706,7 +709,7 @@ export default function ItemDetailPage({ params }: Props) {
                             </span>
                           </span>
                           <span className="text-[var(--muted-foreground)]">
-                            {dc.worlds.length}サーバー / {dc.total_listings}件
+                            {serverListingText(dc.worlds.length, dc.total_listings, locale)}
                           </span>
                         </div>
                       </div>
@@ -719,19 +722,19 @@ export default function ItemDetailPage({ params }: Props) {
                               Server
                             </th>
                             <th className="px-3 py-1.5 text-right font-normal">
-                              最安値
+                              {t("lowestPrice")}
                             </th>
                             <th className="px-3 py-1.5 text-right font-normal">
-                              数量
+                              {t("quantity")}
                             </th>
                             <th className="px-3 py-1.5 text-center font-normal">
                               HQ
                             </th>
                             <th className="px-3 py-1.5 text-right font-normal">
-                              出品数
+                              {t("listingCount")}
                             </th>
                             <th className="px-3 py-1.5 text-right font-normal">
-                              更新
+                              {t("updated")}
                             </th>
                           </tr>
                         </thead>
@@ -827,7 +830,7 @@ export default function ItemDetailPage({ params }: Props) {
                                         colSpan={6}
                                         className="px-3 py-1 text-center text-[var(--muted-foreground)]"
                                       >
-                                        他 {world.all_listings.length - 10} 件
+                                        {moreItemsText(world.all_listings.length - 10, locale)}
                                       </td>
                                     </tr>
                                   )}
@@ -845,7 +848,7 @@ export default function ItemDetailPage({ params }: Props) {
 
           {prices && prices.length === 0 && (
             <p className="py-8 text-center text-[var(--muted-foreground)]">
-              出品データがありません
+              {t("noListings")}
             </p>
           )}
         </>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "@/lib/i18n";
 
 interface ExcludedData {
   ids: number[];
@@ -14,6 +15,7 @@ async function fetchExcluded(): Promise<ExcludedData> {
 }
 
 export default function ExcludedPage() {
+  const { t, name: itemName } = useTranslation();
   const { data } = useQuery({
     queryKey: ["excluded"],
     queryFn: fetchExcluded,
@@ -21,7 +23,7 @@ export default function ExcludedPage() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold">ランキング除外アイテム</h2>
+      <h2 className="text-xl font-bold">{t("excludedItemsTitle")}</h2>
 
       {data && (
         <>
@@ -32,7 +34,7 @@ export default function ExcludedPage() {
               <thead>
                 <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
                   <th className="px-4 py-2">ID</th>
-                  <th className="px-4 py-2">アイテム</th>
+                  <th className="px-4 py-2">{t("item")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -52,7 +54,7 @@ export default function ExcludedPage() {
                         {item.icon_url && (
                           <img src={item.icon_url} alt="" className="h-6 w-6" />
                         )}
-                        <span>{item.name_ja || item.name_en}</span>
+                        <span>{itemName(item.name_ja, item.name_en)}</span>
                       </a>
                     </td>
                   </tr>

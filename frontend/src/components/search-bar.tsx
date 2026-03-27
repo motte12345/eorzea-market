@@ -3,10 +3,12 @@
 import { usePathname, useRouter } from "next/navigation";
 import { ItemSearch } from "@/components/item-search";
 import type { ItemSearchResult } from "@/lib/api";
+import { useTranslation } from "@/lib/i18n";
 
 export function SearchBar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useTranslation();
   const isMarket = pathname.startsWith("/market");
 
   if (!isMarket) return null;
@@ -21,7 +23,7 @@ export function SearchBar() {
 
   return (
     <div className="mx-auto max-w-7xl px-6 pt-3">
-      <ItemSearch onSelect={handleSelect} onSearch={handleSearch} placeholder="アイテム検索..." />
+      <ItemSearch onSelect={handleSelect} onSearch={handleSearch} placeholder={t("searchPlaceholder")} />
     </div>
   );
 }

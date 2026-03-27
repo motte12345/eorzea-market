@@ -1,10 +1,15 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useTranslation } from "@/lib/i18n";
+import { LocaleToggle } from "@/components/locale-toggle";
+import { useLocaleChange } from "@/app/providers";
 
 export function Header() {
   const pathname = usePathname();
   const isMarket = pathname.startsWith("/market");
+  const { t } = useTranslation();
+  const changeLocale = useLocaleChange();
 
   return (
     <header className="border-b border-[var(--border)] px-6 py-3">
@@ -25,23 +30,24 @@ export function Header() {
           </a>
         )}
 
-        <nav className="flex flex-shrink-0 gap-4 text-sm">
+        <nav className="flex flex-shrink-0 items-center gap-4 text-sm">
           <a href="/" className="hover:text-[var(--primary)]">
-            ホーム
+            {t("home")}
           </a>
           <a href="/market" className="hover:text-[var(--primary)]">
-            マーケット
+            {t("market")}
           </a>
           {isMarket && (
             <>
               <a href="/market/categories" className="hover:text-[var(--primary)]">
-                カテゴリ
+                {t("categories")}
               </a>
               <a href="/market/releases" className="hover:text-[var(--primary)]">
-                リリースノート
+                {t("releaseNotes")}
               </a>
             </>
           )}
+          <LocaleToggle onChange={changeLocale} />
         </nav>
       </div>
     </header>

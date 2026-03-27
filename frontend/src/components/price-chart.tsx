@@ -11,6 +11,7 @@ import {
   Legend,
 } from "recharts";
 import { formatGil } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 interface PriceHistoryEntry {
   date: string;
@@ -67,15 +68,22 @@ function formatDate(dateStr: string): string {
 }
 
 export function PriceChart({ data }: Props) {
+  const { t } = useTranslation();
+
   if (data.length === 0) {
     return (
       <p className="py-8 text-center text-[var(--muted-foreground)]">
-        価格推移データがありません
+        {t("noPriceHistory")}
       </p>
     );
   }
 
   const chartData = aggregateByDate(data);
+  const labelMap: Record<string, string> = {
+    avg: t("average"),
+    min: t("lowest"),
+    max: t("highest"),
+  };
 
   return (
     <div className="space-y-4">
@@ -104,14 +112,10 @@ export function PriceChart({ data }: Props) {
               labelFormatter={formatDate}
               formatter={(value: number, name: string) => [
                 `${formatGil(value)}`,
-                name === "avg" ? "平均" : name === "min" ? "最安" : "最高",
+                labelMap[name] ?? name,
               ]}
             />
-            <Legend
-              formatter={(value) =>
-                value === "avg" ? "平均" : value === "min" ? "最安" : "最高"
-              }
-            />
+            <Legend formatter={(value) => labelMap[value] ?? value} />
             <Line
               type="monotone"
               dataKey="avg"

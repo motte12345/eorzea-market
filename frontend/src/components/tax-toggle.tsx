@@ -1,18 +1,19 @@
 "use client";
 
+import { useTranslation, taxLabel } from "@/lib/i18n";
+
 export interface TaxSetting {
   buyRate: number;
   sellRate: number;
-  label: string;
 }
 
 export const TAX_OPTIONS: TaxSetting[] = [
-  { buyRate: 0.05, sellRate: 0.05, label: "購入5% / 売却5%" },
-  { buyRate: 0.05, sellRate: 0.03, label: "購入5% / 売却3%" },
-  { buyRate: 0.05, sellRate: 0.00, label: "購入5% / 売却0%" },
-  { buyRate: 0.03, sellRate: 0.05, label: "購入3% / 売却5%" },
-  { buyRate: 0.03, sellRate: 0.03, label: "購入3% / 売却3%" },
-  { buyRate: 0.03, sellRate: 0.00, label: "購入3% / 売却0%" },
+  { buyRate: 0.05, sellRate: 0.05 },
+  { buyRate: 0.05, sellRate: 0.03 },
+  { buyRate: 0.05, sellRate: 0.00 },
+  { buyRate: 0.03, sellRate: 0.05 },
+  { buyRate: 0.03, sellRate: 0.03 },
+  { buyRate: 0.03, sellRate: 0.00 },
 ];
 
 interface Props {
@@ -21,9 +22,11 @@ interface Props {
 }
 
 export function TaxSelect({ value, onChange }: Props) {
+  const { t, locale } = useTranslation();
+
   return (
     <div className="flex items-center gap-2 text-xs">
-      <span className="text-[var(--muted-foreground)]">税率:</span>
+      <span className="text-[var(--muted-foreground)]">{t("taxRate")}</span>
       <select
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
@@ -31,7 +34,7 @@ export function TaxSelect({ value, onChange }: Props) {
       >
         {TAX_OPTIONS.map((opt, i) => (
           <option key={i} value={i}>
-            {opt.label}
+            {taxLabel(opt.buyRate, opt.sellRate, locale)}
           </option>
         ))}
       </select>

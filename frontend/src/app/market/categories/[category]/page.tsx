@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { use, useState, useMemo } from "react";
 import { formatGil } from "@/lib/utils";
 import { getWatchlistPrices, type WatchlistItem } from "@/lib/api";
+import { useTranslation, itemCount, top200Text } from "@/lib/i18n";
 
 interface Props {
   params: Promise<{ category: string }>;
@@ -33,6 +34,7 @@ export default function CategoryItemsPage({ params }: Props) {
   const categoryName = decodeURIComponent(category);
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<"name" | "id_asc" | "id_desc" | "price_asc" | "price_desc">("name");
+  const { t, name, locale } = useTranslation();
 
   // 最大200件を一括取得
   const { data: catData, isLoading } = useQuery({
@@ -132,8 +134,8 @@ export default function CategoryItemsPage({ params }: Props) {
           <h2 className="text-xl font-bold">{categoryName}</h2>
           {catData && (
             <p className="text-sm text-[var(--muted-foreground)]">
-              {catData.total}件
-              {catData.total > 200 && "（上位200件を表示）"}
+              {itemCount(catData.total, locale)}
+              {catData.total > 200 && top200Text(locale)}
             </p>
           )}
         </div>
@@ -142,27 +144,27 @@ export default function CategoryItemsPage({ params }: Props) {
           onChange={(e) => { setSort(e.target.value as typeof sort); setPage(1); }}
           className="rounded border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-xs text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none"
         >
-          <option value="name">名前順</option>
-          <option value="price_asc">安い順</option>
-          <option value="price_desc">高い順</option>
-          <option value="id_desc">ID（新しい順）</option>
-          <option value="id_asc">ID（古い順）</option>
+          <option value="name">{t("sortName")}</option>
+          <option value="price_asc">{t("sortPriceAsc")}</option>
+          <option value="price_desc">{t("sortPriceDesc")}</option>
+          <option value="id_desc">{t("sortIdDesc")}</option>
+          <option value="id_asc">{t("sortIdAsc")}</option>
         </select>
       </div>
 
-      {isLoading && <p className="text-[var(--muted-foreground)]">読み込み中...</p>}
+      {isLoading && <p className="text-[var(--muted-foreground)]">{t("loading")}</p>}
 
       {pageItems.length > 0 && (
         <div className="overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--card)]">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
-                <th className="px-3 py-2">アイテム</th>
-                <th className="px-3 py-2 text-right">最安値</th>
+                <th className="px-3 py-2">{t("item")}</th>
+                <th className="px-3 py-2 text-right">{t("lowestPrice")}</th>
                 {REGIONS.map((r) => (
                   <th key={r} className="px-3 py-2 text-right">{REGION_SHORT[r]}</th>
                 ))}
-                <th className="px-3 py-2 text-right">差益</th>
+                <th className="px-3 py-2 text-right">{t("profit")}</th>
               </tr>
             </thead>
             <tbody>
@@ -181,7 +183,7 @@ export default function CategoryItemsPage({ params }: Props) {
                         {item.icon_url && (
                           <img src={item.icon_url} alt="" className="h-6 w-6" />
                         )}
-                        <span className="truncate">{item.name_ja || item.name_en}</span>
+                        <span className="truncate">{name(item.name_ja, item.name_en)}</span>
                       </a>
                     </td>
                     <td className="px-3 py-2 text-right font-mono text-xs">
@@ -240,7 +242,7 @@ export default function CategoryItemsPage({ params }: Props) {
             disabled={page <= 1}
             className="rounded border border-[var(--border)] px-3 py-1 text-sm disabled:opacity-30"
           >
-            前へ
+            {t("prev")}
           </button>
           <span className="text-sm text-[var(--muted-foreground)]">
             {page} / {totalPages}
@@ -250,7 +252,7 @@ export default function CategoryItemsPage({ params }: Props) {
             disabled={page >= totalPages}
             className="rounded border border-[var(--border)] px-3 py-1 text-sm disabled:opacity-30"
           >
-            次へ
+            {t("next")}
           </button>
         </div>
       )}

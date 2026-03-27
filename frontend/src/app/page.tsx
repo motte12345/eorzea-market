@@ -1,8 +1,10 @@
 "use client";
 
+import { useTranslation } from "@/lib/i18n";
+
 interface Tool {
   name: string;
-  description: string;
+  descriptionKey: "toolDescription";
   href: string;
   icon: string;
   status: "active" | "coming-soon";
@@ -11,8 +13,7 @@ interface Tool {
 const tools: Tool[] = [
   {
     name: "Eorzea Market",
-    description:
-      "全サーバーのマーケットボード価格をリアルタイム比較。DC間の転売差益を確認。",
+    descriptionKey: "toolDescription",
     href: "/market",
     icon: "/market-icon.png",
     status: "active",
@@ -20,6 +21,7 @@ const tools: Tool[] = [
 ];
 
 export default function PortalPage() {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col items-center gap-12 pt-12">
       <div className="text-center">
@@ -54,7 +56,7 @@ export default function PortalPage() {
                   )}
                 </div>
                 <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-                  {tool.description}
+                  {t(tool.descriptionKey)}
                 </p>
               </div>
             </div>
