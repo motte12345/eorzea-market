@@ -202,7 +202,7 @@ function SearchContent() {
                         return (
                           <div>
                             <span className="text-[var(--positive)]">{gil(best.min_price)}</span>
-                            <div className="text-[10px] text-[var(--muted-foreground)]">{best.world_name}</div>
+                            <div className="text-[10px] text-[var(--muted-foreground)]">{best.data_center} - {best.world_name}</div>
                           </div>
                         );
                       })()}
