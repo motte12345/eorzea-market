@@ -1,28 +1,20 @@
-"use client";
+import fs from "fs";
+import path from "path";
+import { ReleasesContent } from "./content";
 
-import { useEffect, useState } from "react";
-import Markdown from "react-markdown";
-import { useTranslation } from "@/lib/i18n";
+function getReleaseFiles(): { slug: string; content: string }[] {
+  const dir = path.join(process.cwd(), "src/content/releases");
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith(".md"));
+
+  return files
+    .map((f) => ({
+      slug: f.replace(/\.md$/, ""),
+      content: fs.readFileSync(path.join(dir, f), "utf-8"),
+    }))
+    .sort((a, b) => b.slug.localeCompare(a.slug));
+}
 
 export default function ReleasesPage() {
-  const { t } = useTranslation();
-  const [releases, setReleases] = useState<{ slug: string; content: string }[]>([]);
-
-  useEffect(() => {
-    fetch("/api/releases")
-      .then((r) => r.json())
-      .then(setReleases)
-      .catch(() => {});
-  }, []);
-
-  return (
-    <div className="mx-auto max-w-3xl space-y-12">
-      <h1 className="text-2xl font-bold">{t("releaseNotes")}</h1>
-      {releases.map((release) => (
-        <article key={release.slug} className="release-note">
-          <Markdown>{release.content}</Markdown>
-        </article>
-      ))}
-    </div>
-  );
+  const releases = getReleaseFiles();
+  return <ReleasesContent releases={releases} />;
 }
