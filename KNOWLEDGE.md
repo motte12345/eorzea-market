@@ -35,3 +35,17 @@
 - フロントは JP/NA/EU/OCE の4リージョンのみ表示
 - ソートや集計で `prices_by_dc` を使う際は、表示対象リージョンでフィルタしないと不一致が起きる
 - カテゴリAPIの `min_price`（LEFT JOIN listings）も全サーバー含むので同様
+- 対処: `minPriceMap` を `new Set(REGIONS)` でフィルタして構築（カテゴリ・検索ページ両方）
+
+### i18n 実装
+- `lib/i18n.ts` に翻訳辞書、`useTranslation()` フックで `t()`, `name()`, `gil()` を提供
+- locale は cookie (`locale=ja|en`) で保存、`providers.tsx` の `LocaleContext` で配信
+- リリースノートは `v1.0.md` (ja) / `v1.0.en.md` (en) のペアで管理
+- Server Component では `useTranslation` 使えない → Client Component に分離が必要
+- Next.js の `/api` rewrite が Next.js API Route より優先される → フロント内 API Route は使えない
+
+### デプロイ
+- GitHub repo: `motte12345/eorzea-market`
+- `master` push → GitHub Actions (`.github/workflows/deploy.yml`) → SSH でサーバーの `/opt/eorzea-market/deploy.sh` 実行
+- サーバー接続: `ssh ais1`
+- deploy.sh: git pull → pip install → alembic upgrade → npm build → systemd restart
