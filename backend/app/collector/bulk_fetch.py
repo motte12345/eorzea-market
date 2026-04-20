@@ -17,6 +17,95 @@ from app.models.world import World
 
 logger = logging.getLogger(__name__)
 
+# 表示対象リージョン（フロントで見える範囲）
+# 中国・繁中服・韓国・NA Cloud DC (Beta) は非表示かつ高頻度で失敗するため収集から除外
+DISPLAY_REGIONS = frozenset({"Japan", "North-America", "Europe", "Oceania"})
+
+
+async def _fetch_dc(
+    client: httpx.AsyncClient,
+    dc: str,
+    batch: list[int],
+    world_name_to_id: dict[str, int],
+    now: datetime,
+    save_history: bool,
+) -> tuple[list[Listing], list[dict], set[int]]:
+    """1つのDCからバッチ取得してパース（DB書き込みはしない）"""
+    try:
+        data = await universalis_client.get_market_data(client, dc, batch)
+    except Exception as e:
+        logger.warning(f"  Failed {dc}: {e}")
+        return [], [], set()
+
+    # バルクレスポンス: "items" キー、単一: 直接データ
+    if "items" in data:
+        items_data = data["items"]
+    elif len(batch) == 1:
+        items_data = {str(batch[0]): data}
+    else:
+        items_data = {}
+
+    listings: list[Listing] = []
+    sales: list[dict] = []
+    fetched: set[int] = set()
+
+    for item_id_str, item_data in items_data.items():
+        item_id = int(item_id_str)
+        fetched.add(item_id)
+
+        # lastUploadTime はミリ秒 Unix timestamp
+        upload_ts = item_data.get("lastUploadTime", 0)
+        last_upload = (
+            datetime.fromtimestamp(upload_ts / 1000, tz=timezone.utc).replace(tzinfo=None)
+            if upload_ts
+            else None
+        )
+
+        for listing in item_data.get("listings", []):
+            world_name = listing.get("worldName", "")
+            world_id = world_name_to_id.get(world_name)
+            if world_id is None:
+                continue
+
+            listings.append(Listing(
+                item_id=item_id,
+                world_id=world_id,
+                price_per_unit=listing.get("pricePerUnit", 0),
+                quantity=listing.get("quantity", 0),
+                total=listing.get("total", 0),
+                hq=listing.get("hq", False),
+                retainer_name=listing.get("retainerName", ""),
+                fetched_at=now,
+                last_upload_at=last_upload,
+            ))
+
+        if not save_history:
+            continue
+        for sale in item_data.get("recentHistory", []):
+            world_name = sale.get("worldName", "")
+            world_id = world_name_to_id.get(world_name)
+            if world_id is None:
+                continue
+
+            sale_ts = sale.get("timestamp", 0)
+            sold_at = (
+                datetime.fromtimestamp(sale_ts, tz=timezone.utc).replace(tzinfo=None)
+                if sale_ts
+                else now
+            )
+
+            sales.append({
+                "item_id": item_id,
+                "world_id": world_id,
+                "price_per_unit": sale.get("pricePerUnit", 0),
+                "quantity": sale.get("quantity", 0),
+                "hq": sale.get("hq", False),
+                "sold_at": sold_at,
+                "fetched_at": now,
+            })
+
+    return listings, sales, fetched
+
 
 async def fetch_bulk_listings(
     session_factory: async_sessionmaker,
@@ -27,9 +116,11 @@ async def fetch_bulk_listings(
     """複数アイテムの出品データをDC単位でバルク取得してDBに格納
     save_history=True の場合は売買履歴も保存（ウォッチリスト用）
     """
-    # ワールド・DC マスタ取得
+    # ワールド・DC マスタ取得（表示対象リージョンのみ）
     async with session_factory() as session:
-        result = await session.execute(select(World))
+        result = await session.execute(
+            select(World).where(World.region.in_(DISPLAY_REGIONS))
+        )
         all_worlds = result.scalars().all()
         world_name_to_id = {w.name: w.id for w in all_worlds}
         # DC一覧（重複除去）
@@ -47,86 +138,23 @@ async def fetch_bulk_listings(
                 f"items {batch_start + 1}-{min(batch_start + batch_size, len(item_ids))}"
             )
 
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+            # DC単位で並列取得（レートリミットは UniversalisClient._semaphore で制御）
+            results = await asyncio.gather(
+                *[
+                    _fetch_dc(client, dc, batch, world_name_to_id, now, save_history)
+                    for dc in dcs
+                ]
+            )
+
             all_new_listings: list[Listing] = []
             all_new_sales: list[dict] = []
             fetched_item_ids: set[int] = set()
-            now = datetime.now(timezone.utc).replace(tzinfo=None)
-
-            for dc in dcs:
-                try:
-                    data = await universalis_client.get_market_data(
-                        client, dc, batch
-                    )
-                except Exception as e:
-                    logger.warning(f"  Failed {dc}: {e}")
-                    await asyncio.sleep(1)
-                    continue
-
-                # バルクレスポンス: "items" キー、単一: 直接データ
-                if "items" in data:
-                    items_data = data["items"]
-                elif len(batch) == 1:
-                    items_data = {str(batch[0]): data}
-                else:
-                    items_data = {}
-
-                for item_id_str, item_data in items_data.items():
-                    item_id = int(item_id_str)
-                    fetched_item_ids.add(item_id)
-
-                    # lastUploadTime はミリ秒 Unix timestamp
-                    upload_ts = item_data.get("lastUploadTime", 0)
-                    last_upload = (
-                        datetime.fromtimestamp(upload_ts / 1000, tz=timezone.utc).replace(tzinfo=None)
-                        if upload_ts
-                        else None
-                    )
-
-                    for listing in item_data.get("listings", []):
-                        world_name = listing.get("worldName", "")
-                        world_id = world_name_to_id.get(world_name)
-                        if world_id is None:
-                            continue
-
-                        all_new_listings.append(Listing(
-                            item_id=item_id,
-                            world_id=world_id,
-                            price_per_unit=listing.get("pricePerUnit", 0),
-                            quantity=listing.get("quantity", 0),
-                            total=listing.get("total", 0),
-                            hq=listing.get("hq", False),
-                            retainer_name=listing.get("retainerName", ""),
-                            fetched_at=now,
-                            last_upload_at=last_upload,
-                        ))
-
-                    # 売買履歴（ウォッチリストのみ）
-                    if not save_history:
-                        continue
-                    for sale in item_data.get("recentHistory", []):
-                        world_name = sale.get("worldName", "")
-                        world_id = world_name_to_id.get(world_name)
-                        if world_id is None:
-                            continue
-
-                        sale_ts = sale.get("timestamp", 0)
-                        sold_at = (
-                            datetime.fromtimestamp(sale_ts, tz=timezone.utc).replace(tzinfo=None)
-                            if sale_ts
-                            else now
-                        )
-
-                        all_new_sales.append({
-                            "item_id": item_id,
-                            "world_id": world_id,
-                            "price_per_unit": sale.get("pricePerUnit", 0),
-                            "quantity": sale.get("quantity", 0),
-                            "hq": sale.get("hq", False),
-                            "sold_at": sold_at,
-                            "fetched_at": now,
-                        })
-
-                await asyncio.sleep(0.15)  # DC間のレートリミット
+            for listings, sales, fetched in results:
+                all_new_listings.extend(listings)
+                all_new_sales.extend(sales)
+                fetched_item_ids.update(fetched)
 
             # DB書き込み
             if fetched_item_ids:
