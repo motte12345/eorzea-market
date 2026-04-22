@@ -29,13 +29,17 @@ async def _fetch_dc(
     world_name_to_id: dict[str, int],
     now: datetime,
     save_history: bool,
-) -> tuple[list[Listing], list[dict], set[int]]:
-    """1つのDCからバッチ取得してパース（DB書き込みはしない）"""
+) -> tuple[list[Listing], list[dict], set[int], bool]:
+    """1つのDCからバッチ取得してパース（DB書き込みはしない）
+
+    戻り値の最後は成功フラグ。失敗時はFalseを返し、呼び出し側は
+    そのDCの既存データを温存する（部分失敗でデータが消えるのを防ぐ）。
+    """
     try:
         data = await universalis_client.get_market_data(client, dc, batch)
     except Exception as e:
         logger.warning(f"  Failed {dc}: {e}")
-        return [], [], set()
+        return [], [], set(), False
 
     # バルクレスポンス: "items" キー、単一: 直接データ
     if "items" in data:
@@ -104,7 +108,7 @@ async def _fetch_dc(
                 "fetched_at": now,
             })
 
-    return listings, sales, fetched
+    return listings, sales, fetched, True
 
 
 async def fetch_bulk_listings(
@@ -125,6 +129,10 @@ async def fetch_bulk_listings(
         world_name_to_id = {w.name: w.id for w in all_worlds}
         # DC一覧（重複除去）
         dcs = sorted(set(w.data_center for w in all_worlds))
+        # DC→world_idリスト（削除をDC単位に絞るため）
+        dc_to_world_ids: dict[str, list[int]] = {}
+        for w in all_worlds:
+            dc_to_world_ids.setdefault(w.data_center, []).append(w.id)
 
     total_batches = (len(item_ids) + batch_size - 1) // batch_size
 
@@ -150,21 +158,31 @@ async def fetch_bulk_listings(
 
             all_new_listings: list[Listing] = []
             all_new_sales: list[dict] = []
-            fetched_item_ids: set[int] = set()
-            for listings, sales, fetched in results:
+            # DC単位の削除範囲: (そのDCで取得成功したitem_ids, そのDCのworld_ids)
+            dc_deletions: list[tuple[set[int], list[int]]] = []
+            all_fetched_item_ids: set[int] = set()
+            failed_dcs: list[str] = []
+            for dc, (listings, sales, fetched, ok) in zip(dcs, results):
+                if not ok:
+                    failed_dcs.append(dc)
+                    continue
                 all_new_listings.extend(listings)
                 all_new_sales.extend(sales)
-                fetched_item_ids.update(fetched)
+                all_fetched_item_ids.update(fetched)
+                if fetched:
+                    dc_deletions.append((fetched, dc_to_world_ids[dc]))
 
-            # DB書き込み
-            if fetched_item_ids:
+            # DB書き込み: 成功したDCのworldsのlistingsのみ置き換え
+            # （失敗したDCの既存データは温存される）
+            if dc_deletions:
                 async with session_factory() as session:
-                    # listings: 洗い替え
-                    await session.execute(
-                        delete(Listing).where(
-                            Listing.item_id.in_(list(fetched_item_ids))
+                    for del_item_ids, del_world_ids in dc_deletions:
+                        await session.execute(
+                            delete(Listing).where(
+                                Listing.item_id.in_(list(del_item_ids)),
+                                Listing.world_id.in_(del_world_ids),
+                            )
                         )
-                    )
                     session.add_all(all_new_listings)
 
                     # sale_history: 重複は無視して追記 (INSERT IGNORE)
@@ -175,10 +193,17 @@ async def fetch_bulk_listings(
 
                     await session.commit()
 
-                logger.info(
+                msg = (
                     f"  Stored {len(all_new_listings)} listings, "
                     f"{len(all_new_sales)} sales "
-                    f"for {len(fetched_item_ids)} items"
+                    f"for {len(all_fetched_item_ids)} items"
+                )
+                if failed_dcs:
+                    msg += f" (DCs failed, data preserved: {failed_dcs})"
+                logger.info(msg)
+            elif failed_dcs:
+                logger.warning(
+                    f"  All DCs failed for this batch; existing data preserved: {failed_dcs}"
                 )
 
             await asyncio.sleep(0.5)

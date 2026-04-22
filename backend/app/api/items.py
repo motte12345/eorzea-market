@@ -1,8 +1,12 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 
 from app.collector.scheduler import mark_items_requested
 from app.database import get_db
@@ -18,15 +22,31 @@ router = APIRouter()
 
 
 async def _save_proxy_listings(item_id: int, listings: list[dict], db: AsyncSession) -> None:
-    """プロキシで取得した出品データをDBに保存"""
+    """プロキシで取得した出品データをDBに保存
+
+    listingsに含まれるworld_idのみ置き換える。取得に失敗したDCの既存データは温存。
+    """
     try:
         # ワールド名→IDマッピング
         result = await db.execute(select(World))
         world_map = {w.name: w.id for w in result.scalars().all()}
 
-        # 既存データ削除
-        from sqlalchemy import delete
-        await db.execute(delete(Listing).where(Listing.item_id == item_id))
+        # listingsから取得成功したworld_idを収集
+        fetched_world_ids: set[int] = set()
+        for l in listings:
+            wid = world_map.get(l.get("world_name", ""))
+            if wid is not None:
+                fetched_world_ids.add(wid)
+
+        # 既存データ削除（取得成功したworldのみ）
+        if fetched_world_ids:
+            from sqlalchemy import delete
+            await db.execute(
+                delete(Listing).where(
+                    Listing.item_id == item_id,
+                    Listing.world_id.in_(list(fetched_world_ids)),
+                )
+            )
 
         now = datetime.now(timezone.utc).replace(tzinfo=None)
         for l in listings:
@@ -52,6 +72,7 @@ async def _save_proxy_listings(item_id: int, listings: list[dict], db: AsyncSess
             ))
         await db.commit()
     except Exception:
+        logger.exception("_save_proxy_listings failed for item %s", item_id)
         await db.rollback()
 
 

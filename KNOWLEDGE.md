@@ -30,6 +30,13 @@
   - サーバーでは localStorage が存在しない → useEffect で初期化する
   - 例: isInWatchlist() を直接テンプレートで使うとエラー → state経由にする
 
+### DC部分失敗でデータが消える問題（2026-04-22 修正）
+- 旧コード: `fetch_bulk_listings` は、あるアイテムがどこか1DCから取れたら、そのアイテムの全DC listingsを一括削除 → 失敗したDCの既存データが消えていた
+- Universalis APIは個別DCだけ 504/timeout を返すことが日常的にあり、表示DCが虫食いになる原因だった
+- 修正: `_fetch_dc` に成功フラグを追加、削除対象を「成功したDCのworld_idsかつfetched item_ids」に絞る。失敗DCは完全スキップで既存データ温存
+- 同じバグが `api/items.py::_save_proxy_listings` にもあった（プロキシフォールバック経路）。こちらも listings に含まれる world_id のみ削除に変更
+- 教訓: 「洗い替え」系の処理は、取得失敗と「取得成功かつ空」を必ず区別する
+
 ### 価格データのリージョン問題
 - ウォッチリストAPI (`/watchlist/prices`) は中国・台湾・韓国サーバーのデータも返す
 - フロントは JP/NA/EU/OCE の4リージョンのみ表示
