@@ -45,6 +45,9 @@
 ## Phase 5: デプロイ & 仕上げ
 - [x] GitHub Actions CI/CD（push to master → 自動デプロイ）
 - [x] VPS デプロイ（systemd + Nginx）
+- [x] フロントビルドの atomic 化（`.next-new` → mv で差し替え、失敗時も稼働中の.nextは無傷）
+- [x] サーバー Swap 2GB 追加（next build の OOM stall 対策）
+- [ ] GitHub Actions `command_timeout: 15m` 追記（Web UI で対応、未完）
 - [ ] Docker Compose 本番構成
 
 ## 今後の候補

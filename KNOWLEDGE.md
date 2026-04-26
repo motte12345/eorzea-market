@@ -54,5 +54,15 @@
 ### デプロイ
 - GitHub repo: `motte12345/eorzea-market`
 - `master` push → GitHub Actions (`.github/workflows/deploy.yml`) → SSH でサーバーの `/opt/eorzea-market/deploy.sh` 実行
-- サーバー接続: `ssh ais1`
-- deploy.sh: git pull → pip install → alembic upgrade → npm build → systemd restart
+- サーバー接続: `ssh ais` （SSH config の Host 名。KNOWLEDGE 旧版の `ais1` は誤記）
+- deploy.sh: git pull → pip install → alembic upgrade → atomic frontend build → systemd restart
+- フロントビルドは `NEXT_DIST_DIR=.next-new` で別ディレクトリに出力 → 成功後に `mv` で `.next` へ差し替える atomic 方式
+- `next.config.ts` で `distDir: process.env.NEXT_DIST_DIR || ".next"` を必ず維持すること（消すとatomicビルドが壊れる）
+
+### サーバー環境（VPS）の制約と対策（2026-04-24）
+- RAM 1.9GB / Swap 0 で `next build` が OOM stall → 10分タイムアウトで強制終了 → 旧deploy.shが先に `.next` を削除していたためCSS崩れが発生した
+- 対策3点セット:
+  1. **Swap 2GB 追加** (`/swapfile`、`/etc/fstab` で永続化)
+  2. **deploy.sh atomic化** — `.next-new` にビルド成功後に `mv`。失敗しても稼働中`.next`は無傷
+  3. **GitHub Actions `command_timeout: 15m`** （保険、`workflow` スコープが無いとpushでrejectされるのでWeb UI編集）
+- 教訓: メモリ少ないVPSでビルドする場合、`NODE_OPTIONS="--max-old-space-size=1536"` でヒープ上限を切る + atomic デプロイは必須
