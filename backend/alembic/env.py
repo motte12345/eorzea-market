@@ -5,9 +5,11 @@ from sqlalchemy import engine_from_config, pool
 
 from app.config import settings
 from app.database import Base
+from app.models.exclusion import ExcludedItem, ExclusionRequest
 from app.models.item import Item
 from app.models.listing import Listing
 from app.models.price_summary import PriceSummary
+from app.models.ranking_cache import RankingCache
 from app.models.sale_history import SaleHistory
 from app.models.world import World
 

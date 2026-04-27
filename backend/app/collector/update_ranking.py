@@ -5,9 +5,10 @@ import logging
 from datetime import datetime, timezone
 
 from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import settings
+from app.models.exclusion import ExcludedItem
 from app.models.item import Item  # noqa: F401
 from app.models.listing import Listing  # noqa: F401
 from app.models.ranking_cache import RankingCache
@@ -18,22 +19,20 @@ logger = logging.getLogger(__name__)
 # 集計対象リージョン（中国・韓国を除外）
 INCLUDED_REGIONS = ("Japan", "North-America", "Europe", "Oceania")
 
-# ランキングから除外するアイテムID
-EXCLUDED_ITEM_IDS: list[int] = [
-    5859, 39494, 33687, 39493, 33688,
-    5852, 5867, 2821,
-    3167, 5410, 5833, 5592, 3865, 9741, 8825, 5591, 8824, 5853,
-    43685, 5103, 5225, 5311, 5399, 5849, 5880, 5870,
-    18013, 5450, 5846, 5844, 4817, 8828, 7991, 2043, 2823, 3168, 4256, 23853, 5854, 11918, 13642,
-]
+
+async def get_excluded_item_ids(session: AsyncSession) -> list[int]:
+    """DB から除外アイテム ID を取得"""
+    result = await session.execute(select(ExcludedItem.item_id))
+    return [row[0] for row in result.all()]
 
 
 async def update_rankings(session_factory: async_sessionmaker) -> None:
     """ランキングを計算してキャッシュに保存"""
     regions_sql = ", ".join(f"'{r}'" for r in INCLUDED_REGIONS)
-    excluded_sql = ", ".join(str(i) for i in EXCLUDED_ITEM_IDS) if EXCLUDED_ITEM_IDS else "0"
 
     async with session_factory() as session:
+        excluded_ids = await get_excluded_item_ids(session)
+        excluded_sql = ", ".join(str(i) for i in excluded_ids) if excluded_ids else "0"
         # 高額アイテム TOP10
         logger.info("Calculating expensive items...")
         expensive_result = await session.execute(

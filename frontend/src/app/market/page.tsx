@@ -15,6 +15,7 @@ import {
   removeFromWatchlist as removeItem,
 } from "@/lib/watchlist-store";
 import { TaxSelect, TAX_OPTIONS } from "@/components/tax-toggle";
+import { ExcludeRequestButton } from "@/components/exclude-request-button";
 import { calcArbitrageProfit } from "@/lib/utils";
 import { getSettings, saveSettings } from "@/lib/settings-store";
 import { useTranslation, itemCountSuffix, showMoreText } from "@/lib/i18n";
@@ -335,6 +336,9 @@ export default function HomePage() {
                       <td className="px-4 py-2.5 text-right font-mono text-[var(--primary)]">
                         {gil(item.min_price ?? 0)}
                       </td>
+                      <td className="px-2 py-2.5 text-center w-8">
+                        <ExcludeRequestButton itemId={item.item_id} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -424,6 +428,9 @@ export default function HomePage() {
                             <div className="text-[10px] text-[var(--muted-foreground)]">
                               {item.profit_rate}%
                             </div>
+                          </td>
+                          <td className="px-2 py-2.5 text-center w-8">
+                            <ExcludeRequestButton itemId={item.item_id} />
                           </td>
                         </tr>
                       );

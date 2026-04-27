@@ -50,6 +50,19 @@
 - [ ] GitHub Actions `command_timeout: 15m` 追記（Web UI で対応、未完）
 - [ ] Docker Compose 本番構成
 
+## Phase 6: 除外申請機能
+- [x] DB: `excluded_items`, `exclusion_requests` テーブル追加（migration 7c2a91e4d8b3）
+- [x] 既存 `EXCLUDED_ITEM_IDS` を migration で seed
+- [x] `update_ranking.py` を DB 読み込みに変更
+- [x] API: `POST /api/exclusion-requests/{item_id}` 追加（重複は count++）
+- [x] API: `GET /api/exclusion-requests` 申請キュー一覧
+- [x] `/api/ranking/excluded` を DB 参照に変更
+- [x] フロントエンド: ランキング行に除外申請ボタン
+- [x] localStorage で同一ブラウザの重複申請防止
+- [x] 管理スクリプト: `python -m app.collector.apply_exclusions [--dry-run] [--min-count N]`
+- [ ] 本番にマイグレーション適用 (`alembic upgrade head`)
+- [ ] 申請キュー閲覧用の管理画面（後回し可）
+
 ## 今後の候補
 - [ ] データ鮮度の表示（価格取得時刻の相対表示）
 - [ ] 売れ行き指標（sale_historyから販売頻度）

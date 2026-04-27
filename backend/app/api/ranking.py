@@ -6,10 +6,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models.ranking_cache import RankingCache
-
+from app.models.exclusion import ExcludedItem
 from app.models.item import Item
-from app.collector.update_ranking import EXCLUDED_ITEM_IDS
+from app.models.ranking_cache import RankingCache
 
 router = APIRouter()
 
@@ -51,18 +50,27 @@ async def get_arbitrage_profit_items(
 @router.get("/excluded")
 async def get_excluded_items(db: AsyncSession = Depends(get_db)):
     """ランキングから除外されたアイテム一覧"""
-    if not EXCLUDED_ITEM_IDS:
-        return {"ids": [], "items": [], "note": "アイテム名に「SP」を含むものも除外"}
-
     result = await db.execute(
-        select(Item).where(Item.id.in_(EXCLUDED_ITEM_IDS))
+        select(Item, ExcludedItem.excluded_at, ExcludedItem.reason)
+        .join(ExcludedItem, Item.id == ExcludedItem.item_id)
+        .order_by(ExcludedItem.excluded_at.desc())
     )
-    items = [
-        {"id": i.id, "name_ja": i.name_ja, "name_en": i.name_en, "icon_url": i.icon_url}
-        for i in result.scalars().all()
-    ]
+    items = []
+    ids: list[int] = []
+    for item, excluded_at, reason in result.all():
+        ids.append(item.id)
+        items.append(
+            {
+                "id": item.id,
+                "name_ja": item.name_ja,
+                "name_en": item.name_en,
+                "icon_url": item.icon_url,
+                "excluded_at": excluded_at.isoformat() if excluded_at else None,
+                "reason": reason,
+            }
+        )
     return {
-        "ids": EXCLUDED_ITEM_IDS,
+        "ids": ids,
         "items": items,
         "note": "上記アイテムおよびアイテム名に「SP」を含むものはランキングから除外",
     }

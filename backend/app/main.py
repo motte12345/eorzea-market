@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.api.categories import router as categories_router
+from app.api.exclusion_requests import router as exclusion_requests_router
 from app.api.items import router as items_router
 from app.api.ranking import router as ranking_router
 from app.api.refresh import router as refresh_router
@@ -44,6 +45,7 @@ app.add_middleware(
 )
 
 app.include_router(categories_router, prefix="/api/categories", tags=["categories"])
+app.include_router(exclusion_requests_router, prefix="/api/exclusion-requests", tags=["exclusion-requests"])
 app.include_router(items_router, prefix="/api/items", tags=["items"])
 app.include_router(ranking_router, prefix="/api/ranking", tags=["ranking"])
 app.include_router(refresh_router, prefix="/api/refresh", tags=["refresh"])

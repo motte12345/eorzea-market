@@ -78,6 +78,14 @@ const translations = {
   profitAmountSort: { ja: "差額順", en: "By Amount" },
   excludedItemsLink: { ja: "除外アイテム一覧", en: "Excluded items" },
   collapse: { ja: "折りたたむ", en: "Collapse" },
+  excludeRequestButton: { ja: "除外申請", en: "Request exclude" },
+  excludeRequestTitle: { ja: "このアイテムをランキングから除外申請する", en: "Request to exclude this item from rankings" },
+  excludeRequestConfirm: {
+    ja: "このアイテムをランキングから除外するよう申請しますか？管理者の承認後に正式除外されます。",
+    en: "Request to exclude this item from rankings? It will be officially excluded after admin approval.",
+  },
+  excludeRequestDone: { ja: "申請しました", en: "Requested" },
+  excludeRequestFailed: { ja: "申請に失敗しました", en: "Request failed" },
 
   // Item detail
   updatePrice: { ja: "価格を更新", en: "Refresh Price" },

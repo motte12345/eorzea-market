@@ -160,3 +160,15 @@ export async function getWatchlistPrices(
     body: JSON.stringify(itemIds),
   });
 }
+
+export interface ExclusionRequestResponse {
+  status: "requested" | "already_excluded";
+  item_id: number;
+  request_count?: number;
+}
+
+export async function requestExclusion(
+  itemId: number
+): Promise<ExclusionRequestResponse> {
+  return fetchJson(`/exclusion-requests/${itemId}`, { method: "POST" });
+}

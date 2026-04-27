@@ -59,6 +59,15 @@
 - フロントビルドは `NEXT_DIST_DIR=.next-new` で別ディレクトリに出力 → 成功後に `mv` で `.next` へ差し替える atomic 方式
 - `next.config.ts` で `distDir: process.env.NEXT_DIST_DIR || ".next"` を必ず維持すること（消すとatomicビルドが壊れる）
 
+### 除外アイテム管理（2026-04-28）
+- 旧: `update_ranking.py` の `EXCLUDED_ITEM_IDS` Pythonリスト ハードコード → 追加するたびにデプロイ必要
+- 新: `excluded_items` テーブル（正式除外）+ `exclusion_requests` テーブル（申請キュー）の2段構成
+- 申請: `POST /api/exclusion-requests/{item_id}` でカウンタ式 upsert（同一item_idは row 1つ、重複は count++）
+- 承認: `python -m app.collector.apply_exclusions` で pending → excluded_items 昇格 + ランキング再計算
+- マイグレーション `7c2a91e4d8b3` で旧ハードコード ID を seed 済み（ダウンタイム無し）
+- フロント: ランキング行ボタン → localStorage `eorzea-market-exclusion-requested` で同一ブラウザの重複防止
+- 注意: 申請APIは認証無し公開なので、運用が荒れたら CAPTCHA/IP rate limit を追加検討
+
 ### サーバー環境（VPS）の制約と対策（2026-04-24）
 - RAM 1.9GB / Swap 0 で `next build` が OOM stall → 10分タイムアウトで強制終了 → 旧deploy.shが先に `.next` を削除していたためCSS崩れが発生した
 - 対策3点セット:
