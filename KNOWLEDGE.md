@@ -59,6 +59,12 @@
 - フロントビルドは `NEXT_DIST_DIR=.next-new` で別ディレクトリに出力 → 成功後に `mv` で `.next` へ差し替える atomic 方式
 - `next.config.ts` で `distDir: process.env.NEXT_DIST_DIR || ".next"` を必ず維持すること（消すとatomicビルドが壊れる）
 
+### Alembic 複数 head 問題（2026-04-28）
+- 新しい migration を手書きで作るとき `down_revision` を実際の head 以外（例: 古い空の migration）に設定すると、alembic が "Multiple head revisions are present" で `upgrade head` 拒否
+- 確認: `alembic heads` または `from alembic.script import ScriptDirectory; sd.get_heads()`
+- 自動生成（`alembic revision --autogenerate`）に任せれば down_revision は自動で正しい head になる
+- 手書きで作る場合は必ず現 head を `grep "^revision" alembic/versions/*.py` してから設定する
+
 ### 除外アイテム管理（2026-04-28）
 - 旧: `update_ranking.py` の `EXCLUDED_ITEM_IDS` Pythonリスト ハードコード → 追加するたびにデプロイ必要
 - 新: `excluded_items` テーブル（正式除外）+ `exclusion_requests` テーブル（申請キュー）の2段構成
